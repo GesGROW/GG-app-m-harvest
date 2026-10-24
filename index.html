@@ -1,0 +1,1153 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#26734a" />
+    <title>SCC - Sistema de Control de Cosecha</title>
+  </head>
+  <body>
+    <svg class="icon-sprite" aria-hidden="true">
+      <symbol id="icon-arrow-left" viewBox="0 0 24 24">
+        <path d="M15 18l-6-6 6-6M9 12h10" />
+      </symbol>
+      <symbol id="icon-more" viewBox="0 0 24 24">
+        <circle cx="5" cy="12" r="1.4" />
+        <circle cx="12" cy="12" r="1.4" />
+        <circle cx="19" cy="12" r="1.4" />
+      </symbol>
+      <symbol id="icon-keyboard" viewBox="0 0 24 24">
+        <rect x="3" y="5" width="18" height="14" rx="2" />
+        <path
+          d="M7 9h.01M11 9h.01M15 9h.01M18 9h.01M7 13h.01M11 13h.01M15 13h.01M18 13h.01M8 16h8"
+        />
+      </symbol>
+      <symbol id="icon-scan" viewBox="0 0 24 24">
+        <path
+          d="M4 8V5a1 1 0 011-1h3M16 4h3a1 1 0 011 1v3M20 16v3a1 1 0 01-1 1h-3M8 20H5a1 1 0 01-1-1v-3M7 12h10"
+        />
+      </symbol>
+      <symbol id="icon-ticket" viewBox="0 0 24 24">
+        <path d="M5 5h14v4a3 3 0 000 6v4H5v-4a3 3 0 000-6V5zM12 7v10" />
+      </symbol>
+      <symbol id="icon-user" viewBox="0 0 24 24">
+        <circle cx="12" cy="8" r="4" />
+        <path d="M4.5 20a7.5 7.5 0 0115 0" />
+      </symbol>
+      <symbol id="icon-crate" viewBox="0 0 24 24">
+        <path d="M4 8h16l-1.5 11h-13L4 8zM7 8l1-3h8l1 3M8 12h8M9 16h6" />
+      </symbol>
+      <symbol id="icon-search" viewBox="0 0 24 24">
+        <circle cx="11" cy="11" r="6" />
+        <path d="M16 16l4 4" />
+      </symbol>
+      <symbol id="icon-refresh" viewBox="0 0 24 24">
+        <path d="M20 6v5h-5" />
+        <path d="M4 18v-5h5" />
+        <path d="M6.1 9a7 7 0 0111.4-2.6L20 11" />
+        <path d="M17.9 15a7 7 0 01-11.4 2.6L4 13" />
+      </symbol>
+      <symbol id="icon-filter" viewBox="0 0 24 24">
+        <path d="M4 6h16M7 12h10M10 18h4" />
+      </symbol>
+      <symbol id="icon-check" viewBox="0 0 24 24"><path d="M5 12l4 4L19 6" /></symbol>
+      <symbol id="icon-close" viewBox="0 0 24 24">
+        <path d="M6 6l12 12M18 6L6 18" />
+      </symbol>
+    </svg>
+
+    <main class="app">
+      <section id="vista-login" class="pantalla pantalla-login">
+        <div class="login-card card">
+          <div class="login-copy">
+            <h1>Sistema de Control de Cosecha</h1>
+            <p class="subtitulo">Identifique al operador para continuar</p>
+            <p class="subtitulo">DNI: compatibilidad provisional del PDA.</p>
+          </div>
+          <form id="form-login" class="form-stack">
+            <label for="dni-operador">DNI del operador</label>
+            <div class="campo-con-teclado scan-input">
+              <span class="scan-input__icon"
+                ><svg aria-hidden="true"><use href="#icon-scan"></use></svg
+              ></span>
+              <input
+                id="dni-operador"
+                type="text"
+                inputmode="none"
+                autocomplete="off"
+                placeholder="Escanee el DNI"
+                autofocus
+              />
+              <button
+                type="button"
+                class="btn-teclado icon-button"
+                aria-label="Mostrar teclado"
+                aria-pressed="false"
+                aria-controls="dni-operador"
+              >
+                <svg aria-hidden="true"><use href="#icon-keyboard"></use></svg>
+              </button>
+            </div>
+            <button type="submit" class="btn-primary">Ingresar</button>
+          </form>
+          <div id="login-mensaje" class="mensaje" aria-live="polite"></div>
+          <button id="btn-ingreso-cuenta" type="button" class="btn-secondary">
+            Ingresar con cuenta GesGROW
+          </button>
+        </div>
+      </section>
+
+      <section id="vista-acceso-empresa" class="pantalla pantalla-login oculto">
+        <div class="login-card card">
+          <h1>Cuenta GesGROW</h1>
+          <form id="form-cuenta" class="form-stack">
+            <label for="cuenta-email">Correo</label>
+            <input id="cuenta-email" type="email" autocomplete="username" required />
+            <label for="cuenta-password">Contraseña</label>
+            <input
+              id="cuenta-password"
+              type="password"
+              autocomplete="current-password"
+              required
+            />
+            <button type="submit" class="btn-primary">Ingresar</button>
+          </form>
+          <p id="cuenta-mensaje" class="mensaje" aria-live="polite"></p>
+          <div
+            id="cuenta-empresas"
+            class="form-stack"
+            aria-label="Empresas autorizadas"
+          ></div>
+          <div id="cuenta-panel" class="oculto form-stack">
+            <p id="cuenta-modulos"></p>
+            <h2 id="cuenta-empresa-activa"></h2>
+            <p id="cuenta-usuario"></p>
+            <button
+              id="btn-cuenta-campanias"
+              data-permiso="harvest.view"
+              data-modulo="HARVEST"
+              type="button"
+              class="btn-secondary"
+            >
+              Ver campañas
+            </button>
+            <button
+              id="btn-cuenta-trabajadores"
+              data-permiso="workforce.manage"
+              data-modulo="WORKFORCE"
+              type="button"
+              class="btn-secondary"
+            >
+              Ver trabajadores
+            </button>
+            <button
+              id="btn-cuenta-equipo"
+              data-permiso="company.manage"
+              type="button"
+              class="btn-secondary"
+            >
+              Equipo y accesos
+            </button>
+            <label for="cuenta-campania">Campaña para reportes</label>
+            <select id="cuenta-campania"></select>
+            <button
+              id="btn-cuenta-reporte"
+              data-permiso="reports.view"
+              data-modulo="HARVEST"
+              type="button"
+              class="btn-primary"
+            >
+              Resumen de cosecha
+            </button>
+            <div id="cuenta-contenido" class="table-scroll"></div>
+            <button
+              id="btn-cuenta-comercial"
+              class="btn-secondary oculto"
+              type="button"
+            >
+              Administrar suscripción
+            </button>
+            <section id="cuenta-comercial" class="oculto form-stack">
+              <h3>Suscripción y módulos</h3>
+              <p id="cuenta-comercial-resumen"></p>
+              <form id="form-cuenta-comercial" class="form-stack">
+                <label for="cuenta-comercial-accion">Cambio comercial</label>
+                <select id="cuenta-comercial-accion">
+                  <option value="crearSuscripcion">Crear suscripción</option>
+                  <option value="cambiarPlan">Cambiar plan</option>
+                  <option value="renovarSuscripcion">Renovar suscripción</option>
+                  <option value="suspenderSuscripcion">Suspender suscripción</option>
+                  <option value="reactivarSuscripcion">Reactivar suscripción</option>
+                  <option value="cancelarSuscripcion">
+                    Cancelar suscripción definitivamente
+                  </option>
+                  <option value="habilitarModulo">Habilitar módulo / add-on</option>
+                  <option value="deshabilitarModulo">Deshabilitar módulo</option>
+                </select>
+                <div class="form-stack" data-acciones="crearSuscripcion cambiarPlan">
+                  <label for="cuenta-comercial-plan">Plan</label>
+                  <select id="cuenta-comercial-plan"></select>
+                </div>
+                <div class="form-stack" data-acciones="crearSuscripcion">
+                  <label for="cuenta-comercial-estado">Estado inicial</label>
+                  <select id="cuenta-comercial-estado">
+                    <option value="ACTIVA">Activa</option>
+                    <option value="TRIAL">Trial</option>
+                  </select>
+                </div>
+                <div
+                  class="form-stack"
+                  data-acciones="crearSuscripcion renovarSuscripcion habilitarModulo"
+                >
+                  <label for="cuenta-comercial-hasta"
+                    >Vigencia hasta (hora local)</label
+                  >
+                  <input id="cuenta-comercial-hasta" type="datetime-local" />
+                </div>
+                <div
+                  class="form-stack"
+                  data-acciones="habilitarModulo deshabilitarModulo"
+                >
+                  <label for="cuenta-comercial-modulo">Módulo</label>
+                  <select id="cuenta-comercial-modulo">
+                    <option value="HARVEST">HARVEST</option>
+                    <option value="CAMPAIGN">CAMPAIGN</option>
+                    <option value="WORKFORCE">WORKFORCE</option>
+                  </select>
+                </div>
+                <div class="form-stack" data-acciones="habilitarModulo">
+                  <label for="cuenta-comercial-origen">Origen</label>
+                  <select id="cuenta-comercial-origen">
+                    <option value="ADD_ON">Add-on</option>
+                    <option value="EXCEPCION">Excepción</option>
+                  </select>
+                </div>
+                <label for="cuenta-comercial-effective"
+                  >Aplicar desde (hora local; vacío = ahora)</label
+                >
+                <input id="cuenta-comercial-effective" type="datetime-local" />
+                <label for="cuenta-comercial-motivo">Motivo del cambio</label>
+                <textarea id="cuenta-comercial-motivo" required></textarea>
+                <input id="cuenta-comercial-operacion" type="hidden" />
+                <button
+                  id="btn-cuenta-comercial-aplicar"
+                  class="btn-primary"
+                  type="submit"
+                >
+                  Registrar cambio
+                </button>
+                <button
+                  id="btn-cuenta-comercial-nueva"
+                  class="btn-secondary"
+                  type="button"
+                >
+                  Preparar otro cambio
+                </button>
+              </form>
+              <p id="cuenta-comercial-mensaje" role="status"></p>
+              <button
+                id="btn-cuenta-comercial-refrescar"
+                class="btn-secondary"
+                type="button"
+              >
+                Actualizar historial
+              </button>
+              <div id="cuenta-comercial-historial" class="table-scroll"></div>
+            </section>
+          </div>
+          <button id="btn-cuenta-salir" class="btn-secondary" type="button">
+            Salir y volver al ingreso PDA
+          </button>
+        </div>
+      </section>
+
+      <section id="vista-cultivos" class="pantalla pantalla-login oculto">
+        <div class="login-card card">
+          <h1>¿Con qué cultivo vas a trabajar?</h1>
+          <p>Elige una de tus campañas activas.</p>
+          <div id="opciones-cultivo" class="form-stack"></div>
+          <p id="cultivo-mensaje" class="mensaje" aria-live="polite"></p>
+          <button id="btn-cancelar-cultivo" class="btn-secondary" type="button">
+            Volver al ingreso
+          </button>
+        </div>
+      </section>
+
+      <section id="vista-menu" class="pantalla oculto">
+        <header class="app-header">
+          <div class="app-header__identity">
+            <span class="app-header__brand">SCC</span>
+            <div>
+              <span class="topbar-label">Operador</span
+              ><strong id="menu-operador">-</strong>
+            </div>
+          </div>
+          <div class="app-header__actions">
+            <button
+              id="estado-conexion"
+              class="estado-conexion oculto"
+              type="button"
+              aria-label="Ver estado de sincronización"
+              aria-live="polite"
+            ></button>
+            <button id="btn-salir-menu" class="btn-secondary btn-compacto">
+              Salir
+            </button>
+          </div>
+        </header>
+        <div class="contenido contenido-home">
+          <div class="encabezado-menu">
+            <p class="eyebrow">Operación de campo</p>
+            <p id="menu-campania" class="subtitulo"></p>
+            <h1>¿Qué necesita hacer?</h1>
+          </div>
+          <div
+            id="sesiones-restaurables"
+            class="card sesiones-restaurables oculto"
+          ></div>
+          <div class="menu-grid">
+            <button id="btn-menu-asignacion" class="home-action-tile">
+              <span class="home-action-tile__icon"
+                ><svg><use href="#icon-ticket"></use></svg
+              ></span>
+              <span class="home-action-tile__title">Asignar tickets</span>
+            </button>
+            <button id="btn-menu-jaberos" class="home-action-tile">
+              <span class="home-action-tile__icon"
+                ><svg><use href="#icon-user"></use></svg
+              ></span>
+              <span class="home-action-tile__title">Registrar jaberos</span>
+            </button>
+            <button id="btn-menu-lectura" class="home-action-tile">
+              <span class="home-action-tile__icon home-action-tile__icon--harvest"
+                ><svg><use href="#icon-crate"></use></svg
+              ></span>
+              <span class="home-action-tile__title">Lectura de jabas</span>
+            </button>
+            <button id="btn-menu-reportes" class="home-action-tile">
+              <span class="home-action-tile__icon"
+                ><svg><use href="#icon-search"></use></svg
+              ></span>
+              <span class="home-action-tile__title">Reportes</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section id="vista-reportes" class="pantalla pantalla-datos oculto">
+        <header class="app-header">
+          <button
+            id="btn-volver-reportes"
+            class="icon-button btn-secondary"
+            aria-label="Volver al menú"
+          >
+            <svg aria-hidden="true"><use href="#icon-arrow-left"></use></svg>
+          </button>
+          <div class="app-header__title">Reportes</div>
+          <span class="app-header__spacer"></span>
+        </header>
+        <div class="contenido contenido-home">
+          <div class="menu-grid">
+            <button id="btn-reporte-resumen" class="home-action-tile">
+              <span class="home-action-tile__icon home-action-tile__icon--harvest"
+                ><svg><use href="#icon-crate"></use></svg
+              ></span>
+              <span class="home-action-tile__title">Resumen de campaña</span>
+            </button>
+            <button id="btn-reporte-ranking" class="home-action-tile">
+              <span class="home-action-tile__icon home-action-tile__icon--harvest"
+                ><svg><use href="#icon-user"></use></svg
+              ></span>
+              <span class="home-action-tile__title">Ranking de cosechadores</span>
+            </button>
+            <button id="btn-reporte-produccion" class="home-action-tile">
+              <span class="home-action-tile__icon"
+                ><svg><use href="#icon-ticket"></use></svg
+              ></span>
+              <span class="home-action-tile__title">Producción por día</span>
+            </button>
+            <button id="btn-reporte-lotes" class="home-action-tile">
+              <span class="home-action-tile__icon home-action-tile__icon--harvest"
+                ><svg><use href="#icon-crate"></use></svg
+              ></span>
+              <span class="home-action-tile__title">Producción por lote</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section id="vista-resumen-campania" class="pantalla pantalla-datos oculto">
+        <header class="app-header">
+          <button
+            id="btn-volver-resumen"
+            class="icon-button btn-secondary"
+            aria-label="Volver a reportes"
+          >
+            <svg aria-hidden="true"><use href="#icon-arrow-left"></use></svg>
+          </button>
+          <div class="app-header__title">Resumen de campaña</div>
+          <button
+            id="btn-actualizar-resumen"
+            type="button"
+            class="icon-button btn-secondary"
+            aria-label="Actualizar resumen de campaña"
+            title="Actualizar"
+          >
+            <svg aria-hidden="true"><use href="#icon-refresh"></use></svg>
+          </button>
+        </header>
+        <div class="contenido contenido-datos">
+          <div class="report-context">
+            <p id="resumen-campania-nombre">Campaña activa</p>
+            <p id="resumen-campania-fecha" class="resumen-campania__fecha oculto"></p>
+          </div>
+          <div
+            id="resumen-campania-feedback"
+            class="resultado ranking-feedback oculto"
+            aria-live="polite"
+          ></div>
+          <button
+            id="btn-reintentar-resumen"
+            type="button"
+            class="btn-secondary reporte-retry oculto"
+          >
+            Reintentar
+          </button>
+          <div id="resumen-campania-contenido" class="resumen-campania oculto">
+            <article
+              class="metric-card metric-card--primary resumen-campania__principal"
+            >
+              <span class="stat-label">Total de jabas</span>
+              <strong id="resumen-total-jabas" class="stat-numero">0</strong>
+            </article>
+            <div class="resumen-campania__grid">
+              <article class="metric-card">
+                <span class="stat-label">Cosechadores</span>
+                <strong id="resumen-total-cosechadores" class="stat-numero">0</strong>
+              </article>
+              <article class="metric-card">
+                <span class="stat-label">Lotes</span>
+                <strong id="resumen-total-lotes" class="stat-numero">0</strong>
+              </article>
+              <article class="metric-card">
+                <span class="stat-label">Sesiones</span>
+                <strong id="resumen-total-sesiones" class="stat-numero">0</strong>
+              </article>
+              <article class="metric-card">
+                <span class="stat-label">Días con producción</span>
+                <strong id="resumen-dias-produccion" class="stat-numero">0</strong>
+              </article>
+            </div>
+            <article class="resumen-campania__actividad">
+              <span>Última actividad</span>
+              <strong id="resumen-ultima-actividad">Sin actividad registrada</strong>
+            </article>
+            <p id="resumen-campania-empty" class="resumen-campania__empty oculto">
+              Aún no hay producción registrada en esta campaña.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section id="vista-ranking-cosechadores" class="pantalla pantalla-datos oculto">
+        <header class="app-header">
+          <button
+            id="btn-volver-ranking"
+            class="icon-button btn-secondary"
+            aria-label="Volver a reportes"
+          >
+            <svg aria-hidden="true"><use href="#icon-arrow-left"></use></svg>
+          </button>
+          <div class="app-header__title">Ranking de cosechadores</div>
+          <span class="app-header__spacer"></span>
+        </header>
+        <div class="contenido contenido-datos">
+          <div class="report-context">
+            <p id="ranking-campania">Campaña activa</p>
+          </div>
+          <label class="ranking-periodo" for="ranking-periodo">
+            Período
+            <select id="ranking-periodo" class="select-grande">
+              <option value="HOY">Hoy</option>
+              <option value="SEMANA">Esta semana</option>
+              <option value="MES">Este mes</option>
+              <option value="CAMPANIA">Toda la campaña</option>
+            </select>
+          </label>
+          <p class="report-note">
+            Semana desde el lunes. Fechas de Perú. Solo lecturas sincronizadas.
+          </p>
+          <div class="filter-bar">
+            <label class="search-field" for="ranking-busqueda">
+              <svg aria-hidden="true"><use href="#icon-search"></use></svg>
+              <input
+                id="ranking-busqueda"
+                type="search"
+                placeholder="Buscar nombre o DNI..."
+              />
+            </label>
+            <button
+              id="btn-actualizar-ranking"
+              type="button"
+              class="icon-button btn-secondary"
+              aria-label="Actualizar ranking"
+              title="Actualizar"
+            >
+              <svg aria-hidden="true"><use href="#icon-refresh"></use></svg>
+            </button>
+          </div>
+          <p
+            id="ranking-resumen"
+            class="consulta-contador oculto"
+            aria-live="polite"
+          ></p>
+          <div
+            id="ranking-feedback"
+            class="resultado ranking-feedback oculto"
+            aria-live="polite"
+          ></div>
+          <div class="industrial-table-wrap ranking-table-wrap">
+            <table class="industrial-table ranking-table">
+              <thead>
+                <tr>
+                  <th scope="col">#</th>
+                  <th scope="col">Cosechador</th>
+                  <th scope="col" class="industrial-table__numeric">Jabas</th>
+                </tr>
+              </thead>
+              <tbody id="ranking-tabla-body"></tbody>
+            </table>
+            <div id="ranking-empty" class="empty-state oculto">
+              <span class="empty-state__icon"
+                ><svg aria-hidden="true"><use href="#icon-search"></use></svg
+              ></span>
+              <strong>Aún no hay jabas registradas en este período.</strong>
+              <p>Las lecturas sincronizadas aparecerán aquí.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="vista-produccion-diaria" class="pantalla pantalla-datos oculto">
+        <header class="app-header">
+          <button
+            id="btn-volver-produccion"
+            class="icon-button btn-secondary"
+            aria-label="Volver a reportes"
+          >
+            <svg aria-hidden="true"><use href="#icon-arrow-left"></use></svg>
+          </button>
+          <div class="app-header__title">Producción por día</div>
+          <span class="app-header__spacer"></span>
+        </header>
+        <div class="contenido contenido-datos">
+          <div class="report-context">
+            <p id="produccion-campania">Campaña activa</p>
+          </div>
+          <p class="report-note">
+            Compare las jabas y los cosechadores con producción de cada día. Solo
+            lecturas sincronizadas.
+          </p>
+          <div class="report-toolbar">
+            <button
+              id="btn-actualizar-produccion"
+              type="button"
+              class="icon-button btn-secondary"
+              aria-label="Actualizar producción"
+              title="Actualizar"
+            >
+              <svg aria-hidden="true"><use href="#icon-refresh"></use></svg>
+            </button>
+          </div>
+          <p
+            id="produccion-resumen"
+            class="consulta-contador oculto"
+            aria-live="polite"
+          ></p>
+          <div
+            id="produccion-feedback"
+            class="resultado ranking-feedback oculto"
+            aria-live="polite"
+          ></div>
+          <button
+            id="btn-reintentar-produccion"
+            type="button"
+            class="btn-secondary reporte-retry oculto"
+          >
+            Reintentar
+          </button>
+          <div class="industrial-table-wrap produccion-table-wrap">
+            <table class="industrial-table produccion-table">
+              <thead>
+                <tr>
+                  <th scope="col">Fecha</th>
+                  <th scope="col" class="industrial-table__numeric">Jabas</th>
+                  <th scope="col" class="industrial-table__numeric">Cosechadores</th>
+                </tr>
+              </thead>
+              <tbody id="produccion-tabla-body"></tbody>
+            </table>
+            <div id="produccion-empty" class="empty-state oculto">
+              <span class="empty-state__icon"
+                ><svg aria-hidden="true"><use href="#icon-search"></use></svg
+              ></span>
+              <strong>Aún no hay producción registrada en esta campaña.</strong>
+              <p>Las lecturas sincronizadas aparecerán aquí.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="vista-produccion-lotes" class="pantalla pantalla-datos oculto">
+        <header class="app-header">
+          <button
+            id="btn-volver-lotes"
+            class="icon-button btn-secondary"
+            aria-label="Volver a reportes"
+          >
+            <svg aria-hidden="true"><use href="#icon-arrow-left"></use></svg>
+          </button>
+          <div class="app-header__title">Producción por lote</div>
+          <span class="app-header__spacer"></span>
+        </header>
+        <div class="contenido contenido-datos">
+          <div class="report-context">
+            <p id="lotes-campania">Campaña activa</p>
+          </div>
+          <div class="filter-bar">
+            <label class="search-field" for="lotes-busqueda">
+              <svg aria-hidden="true"><use href="#icon-search"></use></svg>
+              <input
+                id="lotes-busqueda"
+                type="search"
+                placeholder="Buscar lote o variedad..."
+              />
+            </label>
+            <button
+              id="btn-actualizar-lotes"
+              type="button"
+              class="icon-button btn-secondary"
+              aria-label="Actualizar producción por lote"
+              title="Actualizar"
+            >
+              <svg aria-hidden="true"><use href="#icon-refresh"></use></svg>
+            </button>
+          </div>
+          <div
+            class="filter-chips filter-chips--wrap lotes-order"
+            aria-label="Ordenar lotes"
+          >
+            <button
+              id="btn-orden-lotes-jabas"
+              type="button"
+              class="filter-chip selected"
+              aria-pressed="true"
+            >
+              Más jabas
+            </button>
+            <button
+              id="btn-orden-lotes-az"
+              type="button"
+              class="filter-chip"
+              aria-pressed="false"
+            >
+              A–Z
+            </button>
+          </div>
+          <p id="lotes-resumen" class="consulta-contador oculto" aria-live="polite"></p>
+          <div
+            id="lotes-feedback"
+            class="resultado ranking-feedback oculto"
+            aria-live="polite"
+          ></div>
+          <button
+            id="btn-reintentar-lotes"
+            type="button"
+            class="btn-secondary reporte-retry oculto"
+          >
+            Reintentar
+          </button>
+          <div id="lotes-lista" class="lotes-lista" aria-live="polite"></div>
+          <div id="lotes-empty" class="empty-state oculto">
+            <span class="empty-state__icon"
+              ><svg aria-hidden="true"><use href="#icon-search"></use></svg
+            ></span>
+            <strong>Aún no hay producción por lote en esta campaña.</strong>
+            <p>Las lecturas sincronizadas aparecerán aquí.</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="vista-sync" class="pantalla pantalla-datos oculto">
+        <header class="app-header">
+          <button
+            id="btn-volver-sync"
+            class="icon-button btn-secondary"
+            aria-label="Volver al menú"
+          >
+            <svg aria-hidden="true"><use href="#icon-arrow-left"></use></svg>
+          </button>
+          <div class="app-header__title">Sincronización</div>
+          <span class="app-header__spacer"></span>
+        </header>
+        <div class="contenido">
+          <div class="titulo-pagina titulo-pagina--datos">
+            <p class="eyebrow">Estado local</p>
+            <h1>Registros por sincronizar</h1>
+            <p id="resumen-sync"></p>
+          </div>
+          <div id="operaciones-error" class="lista-sync"></div>
+        </div>
+      </section>
+
+      <section id="vista-asignacion" class="pantalla pantalla-operativa oculto">
+        <header class="app-header">
+          <button
+            id="btn-volver-menu"
+            class="icon-button btn-secondary"
+            aria-label="Volver al menú"
+          >
+            <svg aria-hidden="true"><use href="#icon-arrow-left"></use></svg>
+          </button>
+          <div class="app-header__title">Asignar tickets</div>
+          <button
+            class="icon-button btn-secondary btn-contexto"
+            data-contexto="asignacion"
+            aria-label="Abrir menú de asignación"
+          >
+            <svg aria-hidden="true"><use href="#icon-more"></use></svg>
+          </button>
+        </header>
+        <div class="contenido contenido-operativo">
+          <div class="contexto-operador">
+            <span>Operador</span><strong id="nombre-operador">-</strong>
+          </div>
+          <div class="card step-card step-card--active">
+            <div class="cabecera-card">
+              <div class="paso-numero">1</div>
+              <div>
+                <h2>Cosechador</h2>
+                <p>Escanee el DNI del cosechador</p>
+              </div>
+            </div>
+            <form id="form-cosechador">
+              <div class="campo-con-teclado scan-input">
+                <span class="scan-input__icon"
+                  ><svg aria-hidden="true"><use href="#icon-scan"></use></svg
+                ></span>
+                <input
+                  id="dni-cosechador"
+                  class="input-grande"
+                  type="text"
+                  inputmode="none"
+                  autocomplete="off"
+                  placeholder="Escanee DNI"
+                />
+                <button
+                  type="button"
+                  class="btn-teclado icon-button"
+                  aria-label="Mostrar teclado"
+                  aria-pressed="false"
+                  aria-controls="dni-cosechador"
+                >
+                  <svg aria-hidden="true"><use href="#icon-keyboard"></use></svg>
+                </button>
+              </div>
+            </form>
+            <div id="info-cosechador" class="resultado-persona oculto">
+              <span class="check"
+                ><svg aria-hidden="true"><use href="#icon-check"></use></svg
+              ></span>
+              <div>
+                <strong id="nombre-cosechador"></strong
+                ><span id="campania-cosechador"></span>
+              </div>
+            </div>
+          </div>
+          <div id="card-ticket" class="card step-card deshabilitado">
+            <div class="cabecera-card">
+              <div class="paso-numero">2</div>
+              <div>
+                <h2>Ticket</h2>
+                <p>Escanee el ticket físico</p>
+              </div>
+            </div>
+            <form id="form-ticket">
+              <div class="campo-con-teclado scan-input">
+                <span class="scan-input__icon"
+                  ><svg aria-hidden="true"><use href="#icon-ticket"></use></svg
+                ></span>
+                <input
+                  id="codigo-ticket"
+                  class="input-grande"
+                  type="text"
+                  inputmode="none"
+                  autocomplete="off"
+                  placeholder="Escanee ticket"
+                  disabled
+                />
+                <button
+                  type="button"
+                  class="btn-teclado icon-button"
+                  aria-label="Mostrar teclado"
+                  aria-pressed="false"
+                  aria-controls="codigo-ticket"
+                  disabled
+                >
+                  <svg aria-hidden="true"><use href="#icon-keyboard"></use></svg>
+                </button>
+              </div>
+            </form>
+          </div>
+          <div id="resultado" class="resultado oculto" aria-live="polite"></div>
+        </div>
+      </section>
+
+      <section id="vista-jaberos" class="pantalla pantalla-operativa oculto">
+        <header class="app-header">
+          <button
+            id="btn-volver-menu-jaberos"
+            class="icon-button btn-secondary"
+            aria-label="Volver al menú"
+          >
+            <svg aria-hidden="true"><use href="#icon-arrow-left"></use></svg>
+          </button>
+          <div class="app-header__title">Registrar jabero</div>
+          <button
+            class="icon-button btn-secondary btn-contexto"
+            data-contexto="jaberos"
+            aria-label="Abrir menú de jaberos"
+          >
+            <svg aria-hidden="true"><use href="#icon-more"></use></svg>
+          </button>
+        </header>
+        <div class="contenido contenido-operativo">
+          <div class="contexto-operador">
+            <span>Operador</span><strong id="jaberos-operador">-</strong>
+          </div>
+          <div class="card step-card step-card--active">
+            <div class="cabecera-card">
+              <div class="paso-numero">1</div>
+              <div>
+                <h2>Identificar trabajador</h2>
+                <p>Escanee el código del DNI</p>
+              </div>
+            </div>
+            <form id="form-jabero">
+              <div class="campo-con-teclado scan-input">
+                <span class="scan-input__icon"
+                  ><svg aria-hidden="true"><use href="#icon-scan"></use></svg
+                ></span>
+                <input
+                  id="dni-jabero"
+                  class="input-grande"
+                  type="text"
+                  inputmode="none"
+                  autocomplete="off"
+                  placeholder="Escanee DNI"
+                />
+                <button
+                  type="button"
+                  class="btn-teclado icon-button"
+                  aria-label="Mostrar teclado"
+                  aria-pressed="false"
+                  aria-controls="dni-jabero"
+                >
+                  <svg aria-hidden="true"><use href="#icon-keyboard"></use></svg>
+                </button>
+              </div>
+            </form>
+          </div>
+          <div id="resultado-jabero" class="resultado oculto" aria-live="polite"></div>
+        </div>
+      </section>
+
+      <section id="vista-lectura" class="pantalla pantalla-operativa oculto">
+        <header class="app-header">
+          <button
+            id="btn-volver-menu-lectura"
+            class="icon-button btn-secondary"
+            aria-label="Volver al menú"
+          >
+            <svg aria-hidden="true"><use href="#icon-arrow-left"></use></svg>
+          </button>
+          <div class="app-header__title">Lectura de jabas</div>
+          <button
+            class="icon-button btn-secondary btn-contexto"
+            data-contexto="lectura"
+            aria-label="Abrir menú de lectura"
+          >
+            <svg aria-hidden="true"><use href="#icon-more"></use></svg>
+          </button>
+        </header>
+        <div class="contenido contenido-operativo">
+          <div class="contexto-operador">
+            <span>Operador</span><strong id="lectura-operador">-</strong>
+          </div>
+          <div id="configuracion-lectura" class="flujo-lectura-config">
+            <div class="card step-card step-card--active">
+              <div class="cabecera-card">
+                <div class="paso-numero">1</div>
+                <div>
+                  <h2>Lote</h2>
+                  <p>Seleccione el lote de trabajo</p>
+                </div>
+              </div>
+              <select
+                id="lote-lectura"
+                class="select-grande"
+                aria-label="Lote de trabajo"
+              >
+                <option value="">Cargando lotes...</option>
+              </select>
+            </div>
+            <div class="card step-card step-card--active">
+              <div class="cabecera-card">
+                <div class="paso-numero">2</div>
+                <div>
+                  <h2>Variedad</h2>
+                  <p>Seleccione la variedad que se cosecha en el lote</p>
+                </div>
+              </div>
+              <select
+                id="variedad-lectura"
+                class="select-grande"
+                aria-label="Variedad a cosechar"
+                disabled
+              >
+                <option value="">Seleccione primero un lote</option>
+              </select>
+            </div>
+            <div class="card step-card step-card--active">
+              <div class="cabecera-card">
+                <div class="paso-numero">3</div>
+                <div>
+                  <h2>Jabero</h2>
+                  <p>Escanee el DNI del encargado</p>
+                </div>
+              </div>
+              <form id="form-iniciar-lectura" class="form-stack">
+                <div class="campo-con-teclado scan-input">
+                  <span class="scan-input__icon"
+                    ><svg aria-hidden="true"><use href="#icon-scan"></use></svg
+                  ></span>
+                  <input
+                    id="dni-jabero-lectura"
+                    class="input-grande"
+                    type="text"
+                    inputmode="none"
+                    autocomplete="off"
+                    placeholder="Escanee DNI"
+                  />
+                  <button
+                    type="button"
+                    class="btn-teclado icon-button"
+                    aria-label="Mostrar teclado"
+                    aria-pressed="false"
+                    aria-controls="dni-jabero-lectura"
+                  >
+                    <svg aria-hidden="true"><use href="#icon-keyboard"></use></svg>
+                  </button>
+                </div>
+                <button type="submit" class="btn-primary">Iniciar lectura</button>
+              </form>
+            </div>
+          </div>
+          <div id="sesion-lectura-activa" class="oculto">
+            <div class="session-status-card">
+              <div class="session-status-card__top">
+                <span class="estado-activo"
+                  ><span class="status-dot"></span>Sesión activa</span
+                >
+                <strong id="sesion-jabero">-</strong>
+              </div>
+              <div class="datos-sesion">
+                <span>Lote <strong id="sesion-lote">-</strong></span>
+                <span>Variedad <strong id="sesion-variedad">-</strong></span>
+              </div>
+            </div>
+            <div class="card step-card step-card--active scan-dominante">
+              <div class="cabecera-card cabecera-card--compacta">
+                <div
+                  id="estado-lectura-ticket"
+                  class="paso-numero paso-numero--check"
+                  role="img"
+                  aria-label="Lectura correcta"
+                >
+                  <svg aria-hidden="true"><use href="#icon-check"></use></svg>
+                </div>
+                <div>
+                  <h2>Escanear ticket</h2>
+                  <p>Cada lectura registra una jaba</p>
+                </div>
+              </div>
+              <form id="form-lectura-ticket">
+                <div class="campo-con-teclado scan-input">
+                  <span class="scan-input__icon"
+                    ><svg aria-hidden="true"><use href="#icon-scan"></use></svg
+                  ></span>
+                  <input
+                    id="ticket-lectura"
+                    class="input-grande"
+                    type="text"
+                    inputmode="none"
+                    autocomplete="off"
+                    placeholder="Escanee ticket"
+                  />
+                  <button
+                    type="button"
+                    class="btn-teclado icon-button"
+                    aria-label="Mostrar teclado"
+                    aria-pressed="false"
+                    aria-controls="ticket-lectura"
+                  >
+                    <svg aria-hidden="true"><use href="#icon-keyboard"></use></svg>
+                  </button>
+                </div>
+              </form>
+              <div
+                id="resultado-lectura"
+                class="resultado oculto"
+                aria-live="polite"
+              ></div>
+            </div>
+            <div class="estadisticas-lectura">
+              <div class="metric-card metric-card--primary">
+                <span class="stat-label">Total sesión</span
+                ><strong id="total-sesion" class="stat-numero">0</strong>
+              </div>
+              <div class="metric-card">
+                <span id="etiqueta-cosechador" class="stat-label"
+                  >Cosechador actual</span
+                ><strong id="total-cosechador" class="stat-numero">0</strong>
+              </div>
+            </div>
+            <button id="btn-finalizar-lectura" class="btn-secondary btn-finalizar">
+              Finalizar lectura
+            </button>
+          </div>
+          <div
+            id="mensaje-modulo-lectura"
+            class="resultado oculto"
+            aria-live="polite"
+          ></div>
+        </div>
+      </section>
+
+      <section id="vista-consulta" class="pantalla pantalla-datos oculto">
+        <header class="app-header">
+          <button
+            id="btn-volver-consulta"
+            class="icon-button btn-secondary"
+            aria-label="Volver a la operación"
+          >
+            <svg aria-hidden="true"><use href="#icon-arrow-left"></use></svg>
+          </button>
+          <div id="titulo-consulta-header" class="app-header__title">Consulta</div>
+          <span class="app-header__spacer"></span>
+        </header>
+        <div class="contenido contenido-datos">
+          <div class="filter-bar">
+            <label class="search-field" for="consulta-busqueda">
+              <svg aria-hidden="true"><use href="#icon-search"></use></svg>
+              <input id="consulta-busqueda" type="search" placeholder="Buscar..." />
+            </label>
+            <button
+              id="btn-actualizar-consulta"
+              type="button"
+              class="icon-button btn-secondary oculto"
+              aria-label="Actualizar"
+              title="Actualizar"
+            >
+              <svg aria-hidden="true"><use href="#icon-refresh"></use></svg>
+            </button>
+          </div>
+          <p
+            id="consulta-feedback"
+            class="resultado oculto"
+            role="status"
+            aria-live="polite"
+          ></p>
+          <div
+            id="consulta-chips"
+            class="filter-chips"
+            aria-label="Filtros rápidos"
+          ></div>
+          <p
+            id="consulta-contador"
+            class="consulta-contador oculto"
+            aria-live="polite"
+          ></p>
+          <div class="industrial-table-wrap">
+            <table class="industrial-table">
+              <thead>
+                <tr id="consulta-tabla-head"></tr>
+              </thead>
+              <tbody id="consulta-tabla-body"></tbody>
+            </table>
+            <div id="consulta-empty" class="empty-state">
+              <span class="empty-state__icon"
+                ><svg aria-hidden="true"><use href="#icon-search"></use></svg
+              ></span>
+              <strong>Vista de consulta preparada</strong>
+              <p>
+                Esta información aparecerá aquí cuando la vista tenga datos conectados.
+              </p>
+              <button
+                id="consulta-empty-accion"
+                type="button"
+                class="btn-secondary empty-state__action oculto"
+              >
+                Volver a lectura
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <div id="context-overlay" class="bottom-sheet-overlay oculto" aria-hidden="true">
+      <section
+        id="context-sheet"
+        class="bottom-sheet"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="context-title"
+      >
+        <div class="bottom-sheet__handle"></div>
+        <div class="bottom-sheet__header">
+          <h2 id="context-title">Opciones</h2>
+          <button
+            id="btn-cerrar-contexto"
+            class="icon-button btn-secondary"
+            type="button"
+            aria-label="Cerrar menú"
+          >
+            <svg aria-hidden="true"><use href="#icon-close"></use></svg>
+          </button>
+        </div>
+        <div id="context-options" class="bottom-sheet__options"></div>
+      </section>
+    </div>
+    <dialog
+      id="confirmacion-lectura"
+      class="confirmacion"
+      aria-labelledby="confirmacion-lectura-titulo"
+      aria-describedby="confirmacion-lectura-mensaje"
+    >
+      <form method="dialog">
+        <h2 id="confirmacion-lectura-titulo">Finalizar lectura</h2>
+        <p id="confirmacion-lectura-mensaje"></p>
+        <div class="confirmacion__acciones">
+          <button type="submit" class="btn-secondary" value="cancelar" autofocus>
+            Cancelar
+          </button>
+          <button type="submit" class="btn-primary" value="confirmar">
+            Finalizar sesión
+          </button>
+        </div>
+      </form>
+    </dialog>
+    <script type="module" src="/src/bootstrap.js"></script>
+  </body>
+</html>
