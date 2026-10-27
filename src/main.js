@@ -511,6 +511,7 @@ function cerrarMenuContextual() {
 
 async function mostrarConsulta(configuracion) {
   consultaActual = configuracion
+  consultaTablaHead.dataset.consulta = configuracion.id
   consultaTablaHead.classList.toggle(
     'consulta-jaberos',
     ['jaberos-campania', 'buscar-jabero'].includes(configuracion.id)
@@ -569,7 +570,6 @@ async function prepararConsultaAsignadosHoy() {
     const th = document.createElement('th')
     th.scope = 'col'
     th.textContent = columna
-    if (columna === columnaFecha) th.classList.add('industrial-table__numeric')
     consultaTablaHead.append(th)
   }
 
@@ -767,7 +767,6 @@ async function prepararConsultaCosechadoresJabas({ conservarFiltros = false } = 
     const th = document.createElement('th')
     th.scope = 'col'
     th.textContent = columna
-    if (columna !== 'Cosechador') th.classList.add('industrial-table__numeric')
     consultaTablaHead.append(th)
   }
 
@@ -861,11 +860,13 @@ async function prepararConsultaSesionesLectura({ conservarFiltros = false } = {}
   consultaEmptyAccion.classList.add('oculto')
   if (!conservarFiltros) filtroSesionesLectura = FILTROS_SESIONES_LECTURA.TODAS
 
-  const [sesiones, trabajadores] = await Promise.all([
+  const [sesiones, trabajadores, lotes] = await Promise.all([
     obtenerSesionesOperador(operador.dni),
-    obtenerTrabajadores()
+    obtenerTrabajadores(),
+    obtenerLotes()
   ])
   const nombresPorDni = new Map(trabajadores.map((t) => [t.dni, t.nombre]))
+  const nombresLotes = new Map(lotes.map((lote) => [lote.lote_id, lote.nombre]))
   sesionesConsultaActual = await Promise.all(
     sesiones.map(async (sesion) => {
       const sesionId = sesion.id ?? sesion.sesion_id
@@ -873,6 +874,10 @@ async function prepararConsultaSesionesLectura({ conservarFiltros = false } = {}
       return enriquecerSesionLectura(
         {
           ...sesion,
+          lote_nombre:
+            nombresLotes.get(sesion.lote_id)?.trim() ||
+            sesion.lote_nombre?.trim() ||
+            'Lote sin nombre',
           jabero: nombreCosechadorVisible(
             nombresPorDni.get(sesion.dni_jabero) || sesion.jabero,
             sesion.dni_jabero
@@ -914,7 +919,6 @@ async function prepararConsultaSesionesLectura({ conservarFiltros = false } = {}
     const th = document.createElement('th')
     th.scope = 'col'
     th.textContent = columna
-    if (columna === 'Jabas') th.classList.add('industrial-table__numeric')
     consultaTablaHead.append(th)
   }
 
@@ -922,10 +926,19 @@ async function prepararConsultaSesionesLectura({ conservarFiltros = false } = {}
 }
 
 function renderSesionesLectura() {
+  const busqueda = consultaBusqueda.value.trim().toLocaleLowerCase('es-PE')
   const sesiones = filtrarSesionesLectura(sesionesConsultaActual, {
-    busqueda: consultaBusqueda.value,
     filtro: filtroSesionesLectura
-  })
+  }).filter(
+    (sesion) =>
+      !busqueda ||
+      [sesion.jabero, sesion.dni_jabero, sesion.lote_nombre, sesion.variedad].some(
+        (valor) =>
+          String(valor ?? '')
+            .toLocaleLowerCase('es-PE')
+            .includes(busqueda)
+      )
+  )
 
   consultaTablaBody.replaceChildren()
 
@@ -945,7 +958,7 @@ function renderSesionesLectura() {
     jabero.textContent = sesion.jabero || sesion.dni_jabero || 'Jabero sin identificar'
     const lote = document.createElement('span')
     lote.textContent =
-      [sesion.lote_codigo || sesion.lote_id, sesion.variedad]
+      [sesion.lote_nombre || 'Lote sin nombre', sesion.variedad]
         .filter(Boolean)
         .join(' · ') || 'Lote no disponible'
     const periodo = document.createElement('span')
@@ -1030,7 +1043,7 @@ function abrirDetalleSesionLectura(sesion) {
   const campos = [
     ['Jabero', sesion.jabero],
     ['DNI', sesion.dni_jabero],
-    ['Lote', sesion.lote_codigo || sesion.lote_id],
+    ['Lote', sesion.lote_nombre || 'Lote sin nombre'],
     ['Variedad', sesion.variedad],
     ['Inicio', formatearFechaSesion(sesion.fecha_inicio)],
     ['Fin', sesion.fecha_fin ? formatearFechaSesion(sesion.fecha_fin) : ''],
@@ -1434,9 +1447,17 @@ async function cargarProduccionLotes() {
     const respuesta = await obtenerProduccionLotes(operador.dni, (parametros) =>
       consultarCampania(backend.obtenerProduccionLotes, parametros)
     )
+    const lotes = await obtenerLotes()
+    const nombresLotes = new Map(lotes.map((lote) => [lote.lote_id, lote.nombre]))
     produccionLotesActual = reemplazarProduccionLotes(
       produccionLotesActual,
-      respuesta.produccion
+      respuesta.produccion.map((fila) => ({
+        ...fila,
+        lote_nombre:
+          nombresLotes.get(fila.lote_id)?.trim() ||
+          fila.lote_nombre?.trim() ||
+          'Lote sin nombre'
+      }))
     )
     produccionLotesCampaniaActual = respuesta.campania.nombre || 'Campaña activa'
     lotesCampania.textContent = produccionLotesCampaniaActual
@@ -1467,6 +1488,13 @@ function renderProduccionLotes() {
 
   const filtradas = buscarProduccionLotes(produccionLotesActual, lotesBusqueda.value)
   const filas = ordenarProduccionLotes(filtradas, ordenProduccionLotes)
+  if (ordenProduccionLotes === ORDEN_PRODUCCION_LOTES.AZ) {
+    filas.sort(
+      (a, b) =>
+        a.lote_nombre.localeCompare(b.lote_nombre, 'es', { sensitivity: 'base' }) ||
+        a.variedad.localeCompare(b.variedad, 'es', { sensitivity: 'base' })
+    )
+  }
   lotesLista.replaceChildren()
 
   for (const fila of filas) {
@@ -1478,11 +1506,11 @@ function renderProduccionLotes() {
 
     const identidad = document.createElement('div')
     identidad.className = 'lote-report-card__identity'
-    const codigo = document.createElement('strong')
-    codigo.textContent = fila.lote_codigo || 'Lote sin código'
+    const nombre = document.createElement('strong')
+    nombre.textContent = fila.lote_nombre?.trim() || 'Lote sin nombre'
     const variedad = document.createElement('span')
     variedad.textContent = fila.variedad || 'Variedad no disponible'
-    identidad.append(codigo, variedad)
+    identidad.append(nombre, variedad)
 
     const produccion = document.createElement('div')
     produccion.className = 'lote-report-card__production'
@@ -1494,13 +1522,6 @@ function renderProduccionLotes() {
 
     cabecera.append(identidad, produccion)
     articulo.append(cabecera)
-
-    if (fila.lote_nombre) {
-      const nombre = document.createElement('p')
-      nombre.className = 'lote-report-card__name'
-      nombre.textContent = fila.lote_nombre
-      articulo.append(nombre)
-    }
 
     const metricas = document.createElement('div')
     metricas.className = 'lote-report-card__metrics'

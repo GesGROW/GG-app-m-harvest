@@ -4,6 +4,7 @@
   --table-font-size: 1rem;
   --table-cell-padding-x: 16px;
   --table-edge-padding: 24px;
+  --table-min-width: 344px;
   position: relative;
   width: 100%;
   max-width: 100%;
@@ -18,9 +19,15 @@
   display: none;
 }
 
+#cuenta-comercial-historial table {
+  min-width: 1120px;
+  table-layout: fixed;
+}
+
 .industrial-table,
 .table-scroll table {
   width: 100%;
+  min-width: var(--table-min-width);
   border-collapse: collapse;
   background: var(--portal-summary-surface);
   color: var(--portal-ink);
@@ -30,6 +37,9 @@
 }
 
 .industrial-table {
+  --table-first-column: 42%;
+  --table-second-column: 30%;
+  --table-last-column: 28%;
   table-layout: fixed;
 }
 
@@ -42,6 +52,21 @@
   font-weight: 400;
   text-align: left;
   overflow-wrap: anywhere;
+  white-space: normal;
+  vertical-align: middle;
+  min-width: 0;
+}
+
+.industrial-table :is(th, td):first-child {
+  width: var(--table-first-column);
+}
+
+.industrial-table :is(th, td):nth-child(2) {
+  width: var(--table-second-column);
+}
+
+.industrial-table :is(th, td):last-child {
+  width: var(--table-last-column);
 }
 
 .industrial-table :is(th, td):first-child,
@@ -62,6 +87,11 @@
   background: var(--portal-table-head);
   color: var(--color-white);
   font-weight: 500;
+  text-align: left;
+  overflow-wrap: normal;
+  word-break: normal;
+  white-space: normal;
+  hyphens: none;
 }
 
 .industrial-table tbody td,
@@ -81,23 +111,56 @@
   font-weight: 500;
 }
 
-.table-scroll :is(th, td) {
-  min-width: 100px;
+.industrial-table :is(strong, span),
+.table-scroll :is(strong, span) {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.industrial-table .sync-badge {
+  display: inline-block;
+  box-sizing: border-box;
+}
+
+.industrial-table:has([data-consulta='sesiones-lectura']) {
+  --table-first-column: 50%;
+  --table-second-column: 20%;
+  --table-last-column: 30%;
+}
+
+.industrial-table:has([data-consulta='buscar-asignacion']) {
+  --table-first-column: 40%;
+  --table-second-column: 30%;
+  --table-last-column: 30%;
+}
+
+.industrial-table.ranking-table {
+  --table-first-column: 12%;
+  --table-second-column: 52%;
+  --table-last-column: 36%;
+}
+
+.industrial-table.produccion-table {
+  --table-min-width: 380px;
+  --table-first-column: 30%;
+  --table-second-column: 24%;
+  --table-last-column: 46%;
 }
 
 /* Reserva espacio para el DNI completo y la etiqueta de estado en el PDA. */
-.industrial-table:has(.consulta-jaberos) :is(th, td):first-child {
-  width: 40%;
+.industrial-table:has(.consulta-jaberos) {
+  --table-first-column: 40%;
+  --table-second-column: 28%;
+  --table-last-column: 32%;
 }
 
 .industrial-table:has(.consulta-jaberos) :is(th, td):nth-child(2) {
-  width: 28%;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
 .industrial-table:has(.consulta-jaberos) :is(th, td):last-child {
-  width: 32%;
   white-space: nowrap;
 }
 

@@ -35,6 +35,10 @@ superficies crema, acentos lima y controles redondeados. `src/tokens.css` concen
 la paleta y la tipografía; `src/tables.css` unifica todas las tablas con el Portal.
 `src/style.css` adapta los componentes a móvil y PDA,
 con controles táctiles de al menos 48 px y campos de escaneo de 64 px.
+Los encabezados de tabla se alinean a la izquierda, el contenido largo se ajusta
+dentro de su celda y las tablas anchas tienen desplazamiento horizontal propio.
+Las vistas de lotes muestran sus nombres; los códigos e identificadores se
+conservan internamente para la operación y sincronización.
 
 La referencia visual son `owner-home.css`, `account-access.css` y `portal-tables.css`
 del Portal. El logotipo y la fotografía se conservan en `public/brand/`, y las

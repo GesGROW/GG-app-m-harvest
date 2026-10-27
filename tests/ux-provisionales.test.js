@@ -11,6 +11,7 @@ import * as asignados from '@gesgrow/core/contexts/harvest/application/queries/a
 import * as jaberos from '@gesgrow/core/contexts/workforce/application/queries/jaberosCampania.js'
 import * as cosechadores from '@gesgrow/core/contexts/harvest/application/queries/cosechadoresJabas.js'
 import * as sesiones from '@gesgrow/core/contexts/harvest/application/queries/sesionesLectura.js'
+import * as produccionLotes from '@gesgrow/core/contexts/harvest/application/reports/produccionLotes.js'
 import { nombreCosechadorVisible } from '../src/modules/cosechadorLocal.js'
 import { crearSupabaseBackend } from '../src/infrastructure/supabase/backendAdapter.js'
 
@@ -617,6 +618,109 @@ test('Sesiones refresca nombres y conserva Activas/Cerradas sin perder lecturas 
   await vista.actualizar()
   assert.equal(vista.calls.length, 2)
   assert.deepEqual(vista.nombres(), ['Marco Góngora'])
+})
+
+test('lista, búsqueda y detalle de sesiones usan el nombre del lote sin cambiar su código', async () => {
+  await local.guardarCache({
+    ...base(),
+    lotes: [{ lote_id: 'lote-norte', codigo: 'L-1', nombre: 'Campo Norte' }]
+  })
+  await local.guardarSesionLocal({
+    id: 'sesion-nombre',
+    lote_id: 'lote-norte',
+    lote_codigo: 'L-1',
+    dni_operador: '47480378',
+    dni_jabero: '80000001',
+    jabero: 'Jabero de muestra',
+    variedad: 'Biloxi',
+    estado: 'ACTIVA',
+    fecha_inicio: new Date().toISOString()
+  })
+  const vista = consulta('sesiones-lectura')
+  await vista.abrir()
+  const resumen = () =>
+    vista.nodes.consultaTablaBody.children[0].children[0].children[1].textContent
+  assert.equal(resumen(), 'Campo Norte · Biloxi')
+  vista.nodes.consultaBusqueda.value = 'campo norte'
+  vista.ctx.renderSesionesLectura()
+  assert.equal(resumen(), 'Campo Norte · Biloxi')
+  const registro = (await local.obtenerSesionesOperador('47480378'))[0]
+  assert.equal(registro.lote_codigo, 'L-1')
+
+  Object.assign(vista.ctx, {
+    contextTitle: element(),
+    contextOptions: element(),
+    contextOverlay: element(),
+    btnCerrarContexto: element()
+  })
+  vm.runInContext(
+    main.slice(
+      main.indexOf('function abrirDetalleSesionLectura('),
+      main.indexOf('async function abrirResumenCampania(')
+    ),
+    vista.ctx
+  )
+  vista.ctx.abrirDetalleSesionLectura(vista.ctx.sesionesConsultaActual[0])
+  const campos = vista.ctx.contextOptions.children[0].children
+  assert.equal(
+    campos.find((grupo) => grupo.children[0].textContent === 'Lote').children[1]
+      .textContent,
+    'Campo Norte'
+  )
+})
+
+test('producción muestra nombres locales y ordena A–Z por el nombre visible', async () => {
+  const filas = [
+    { lote_id: 'norte', lote_codigo: 'A-1', lote_nombre: 'Anterior', variedad: 'Hass' },
+    { lote_id: 'sur', lote_codigo: 'Z-1', lote_nombre: 'Campo A', variedad: 'Hass' }
+  ].map((fila) => ({
+    ...fila,
+    total_jabas: 10,
+    total_cosechadores: 1,
+    total_sesiones: 1
+  }))
+  const ctx = vm.createContext({
+    ...produccionLotes,
+    operador: { dni: '47480378' },
+    navigator: { onLine: true },
+    backend: { obtenerProduccionLotes: () => {} },
+    consultarCampania: async () => ({
+      ok: true,
+      campania: { id: 'C', nombre: 'Campaña' },
+      produccion: filas
+    }),
+    obtenerLotes: async () => [{ lote_id: 'norte', nombre: 'Campo Z' }],
+    ordenProduccionLotes: produccionLotes.ORDEN_PRODUCCION_LOTES.AZ,
+    produccionLotesActual: [],
+    lotesBusqueda: { value: '' },
+    btnActualizarLotes: element(),
+    btnReintentarLotes: element(),
+    lotesCampania: element(),
+    lotesResumen: element(),
+    lotesEmpty: element(),
+    lotesLista: element(),
+    mostrarFeedbackLotes() {},
+    ocultarFeedbackLotes() {},
+    formatearNumero: String,
+    document: { createElement: element }
+  })
+  vm.runInContext(
+    main.slice(
+      main.indexOf('async function cargarProduccionLotes()'),
+      main.indexOf('function actualizarControlesOrdenLotes()')
+    ),
+    ctx
+  )
+  await ctx.cargarProduccionLotes()
+  const nombres = () =>
+    ctx.lotesLista.children.map(
+      (card) => card.children[0].children[0].children[0].textContent
+    )
+  assert.deepEqual(nombres(), ['Campo A', 'Campo Z'])
+  ctx.lotesBusqueda.value = 'Campo Z'
+  ctx.renderProduccionLotes()
+  assert.deepEqual(nombres(), ['Campo Z'])
+  assert.equal(ctx.produccionLotesActual[0].lote_codigo, 'A-1')
 })
 
 test('cada reporte conserva AppBar, contexto de campaña y refresco solo por icono', () => {

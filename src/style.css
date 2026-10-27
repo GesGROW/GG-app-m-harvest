@@ -636,6 +636,7 @@ textarea {
 
 .sesion-restaurable p {
   margin-bottom: 0;
+  overflow-wrap: anywhere;
   color: var(--color-ink-700);
   font-size: var(--font-size-sm);
 }
@@ -930,6 +931,12 @@ textarea {
   color: var(--color-ink-900);
 }
 
+.datos-sesion > span {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
 .scan-dominante {
   padding: var(--space-3);
 }
@@ -1097,7 +1104,7 @@ textarea {
   outline-offset: -3px;
 }
 
-.industrial-table__numeric {
+.industrial-table td.industrial-table__numeric {
   text-align: right !important;
 }
 
@@ -1129,7 +1136,7 @@ textarea {
 .industrial-table__time {
   color: var(--color-ink-700);
   font-variant-numeric: tabular-nums;
-  white-space: nowrap;
+  white-space: normal;
 }
 
 .industrial-table__time span {
@@ -1146,21 +1153,6 @@ textarea {
   border-radius: var(--radius-md);
   background: var(--color-surface-150);
   color: var(--color-ink-700);
-}
-
-.ranking-table th:first-child,
-.ranking-table td:first-child {
-  width: 12%;
-}
-
-.ranking-table th:nth-child(2),
-.ranking-table td:nth-child(2) {
-  width: 58%;
-}
-
-.ranking-table th:last-child,
-.ranking-table td:last-child {
-  width: 30%;
 }
 
 .ranking-table td {
@@ -1273,21 +1265,6 @@ textarea {
   font-weight: 650;
 }
 
-.produccion-table th:first-child,
-.produccion-table td:first-child {
-  width: 42%;
-}
-
-.produccion-table th:nth-child(2),
-.produccion-table td:nth-child(2) {
-  width: 23%;
-}
-
-.produccion-table th:last-child,
-.produccion-table td:last-child {
-  width: 35%;
-}
-
 .produccion-table td {
   height: 60px;
 }
@@ -1385,13 +1362,6 @@ textarea {
   color: var(--color-ink-600);
   font-size: 0.74rem;
   font-weight: 750;
-}
-
-.lote-report-card__name {
-  margin: var(--space-2) 0 0;
-  overflow-wrap: anywhere;
-  color: var(--color-ink-700);
-  font-size: var(--font-size-sm);
 }
 
 .lote-report-card__metrics {
@@ -1970,51 +1940,6 @@ textarea {
 
   .session-status-card__top > strong {
     max-width: 100%;
-  }
-
-  .industrial-table th:first-child,
-  .industrial-table td:first-child {
-    width: 50%;
-  }
-
-  .industrial-table th:nth-child(2),
-  .industrial-table td:nth-child(2) {
-    width: 30%;
-  }
-
-  .industrial-table th:last-child,
-  .industrial-table td:last-child {
-    width: 20%;
-  }
-
-  .ranking-table th:first-child,
-  .ranking-table td:first-child {
-    width: 12%;
-  }
-
-  .ranking-table th:nth-child(2),
-  .ranking-table td:nth-child(2) {
-    width: 58%;
-  }
-
-  .ranking-table th:last-child,
-  .ranking-table td:last-child {
-    width: 30%;
-  }
-
-  .produccion-table th:first-child,
-  .produccion-table td:first-child {
-    width: 42%;
-  }
-
-  .produccion-table th:nth-child(2),
-  .produccion-table td:nth-child(2) {
-    width: 23%;
-  }
-
-  .produccion-table th:last-child,
-  .produccion-table td:last-child {
-    width: 35%;
   }
 }
 
