@@ -223,6 +223,17 @@ svg {
   height: 23px;
 }
 
+.icon-button svg:has(use[href='#icon-refresh']) {
+  width: 24px;
+  height: 24px;
+  color: var(--portal-ink);
+  stroke-width: 2;
+}
+
+.icon-button:disabled svg:has(use[href='#icon-refresh']) {
+  color: var(--color-disabled-fg);
+}
+
 .form-stack {
   display: grid;
   gap: var(--space-3);
