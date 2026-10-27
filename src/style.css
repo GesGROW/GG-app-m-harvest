@@ -1093,56 +1093,8 @@ textarea {
   font-size: var(--font-size-sm);
 }
 
-.industrial-table-wrap {
-  position: relative;
-  overflow: hidden;
-  min-height: 220px;
-  border: 0;
-  border-radius: var(--radius-xl);
-  background: var(--portal-summary-surface);
-}
-
-.industrial-table {
-  width: 100%;
-  border-collapse: collapse;
-  table-layout: fixed;
-  font-size: var(--font-size-sm);
-}
-
-.industrial-table th,
-.industrial-table td {
-  height: 56px;
-  padding: var(--space-2) var(--space-4);
-  overflow: hidden;
-  border-bottom: 2px solid var(--color-white);
-  text-align: left;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.industrial-table th {
-  position: sticky;
-  top: 0;
-  z-index: 1;
-  background: var(--portal-table-head);
-  color: var(--color-white);
-  font-weight: 600;
-}
-
-.industrial-table tbody tr:hover {
-  background: #e3ebd5;
-}
-
 .industrial-table__row--interactive:focus-visible {
   outline-offset: -3px;
-}
-
-.industrial-table th:first-child {
-  border-top-left-radius: var(--radius-lg);
-}
-
-.industrial-table th:last-child {
-  border-top-right-radius: var(--radius-lg);
 }
 
 .industrial-table__numeric {
@@ -1158,9 +1110,7 @@ textarea {
 
 .industrial-table__person strong,
 .industrial-table__ticket strong {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .industrial-table__person span {
@@ -1188,7 +1138,6 @@ textarea {
 }
 
 .industrial-table__count {
-  font-weight: 800;
   font-variant-numeric: tabular-nums;
 }
 
@@ -1764,38 +1713,6 @@ textarea {
   border-top: 1px solid var(--portal-border);
 }
 
-.table-scroll {
-  max-width: 100%;
-  overflow-x: auto;
-  border-radius: var(--radius-lg);
-}
-
-.table-scroll:empty {
-  display: none;
-}
-
-.table-scroll table {
-  width: 100%;
-  border-collapse: collapse;
-  background: var(--portal-summary-surface);
-  font-size: var(--font-size-sm);
-}
-
-.table-scroll th,
-.table-scroll td {
-  min-width: 100px;
-  padding: var(--space-3) var(--space-4);
-  border-bottom: 2px solid var(--color-white);
-  text-align: left;
-  overflow-wrap: anywhere;
-}
-
-.table-scroll th {
-  background: var(--portal-table-head);
-  color: var(--color-white);
-  font-weight: 600;
-}
-
 :root select:not([multiple]):not([size]) {
   min-height: var(--control-height);
 }
@@ -2053,17 +1970,6 @@ textarea {
 
   .session-status-card__top > strong {
     max-width: 100%;
-  }
-
-  .industrial-table th {
-    font-size: var(--font-size-xs);
-    white-space: normal;
-    line-height: 1.25;
-  }
-
-  .industrial-table th,
-  .industrial-table td {
-    padding-inline: var(--space-2);
   }
 
   .industrial-table th:first-child,

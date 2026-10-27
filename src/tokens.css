@@ -39,8 +39,10 @@
   --portal-selected: #c1f13d;
   --portal-action: #93b730;
   --portal-action-hover: #83a429;
-  /* Verde del encabezado del Portal, oscurecido para texto pequeño en el PDA. */
-  --portal-table-head: #18860e;
+  --portal-table-head: #1b9e10;
+  --portal-table-hover: #e3ebd5;
+  --portal-table-empty: #d9d9d9;
+  --portal-table-divider: #fff;
   --portal-muted: #52635a;
   --portal-border: #cbd0c4;
 

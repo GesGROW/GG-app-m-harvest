@@ -12,6 +12,7 @@ import {
   guardarTicketLocal,
   obtenerTicket,
   obtenerTrabajador,
+  obtenerLotes,
   obtenerUltimaLecturaSesion
 } from '../src/offline/db.js'
 import {
@@ -26,7 +27,8 @@ const consultas = {
   obtenerUltimaLecturaSesion,
   contarLecturasCosechador,
   obtenerTicket,
-  obtenerTrabajador
+  obtenerTrabajador,
+  obtenerLotes
 }
 
 test('reconciliar conteos elimina producción rechazada sin tocar input, foco ni mensaje de rechazo', async () => {
@@ -96,6 +98,95 @@ function vista() {
 function sesion(id) {
   return { sesion_id: id, jabero: 'Juan', lote_codigo: 'L1', variedad: 'Uva' }
 }
+
+test('la sesión activa usa el nombre del lote local al iniciar o restaurar', async () => {
+  const registro = {
+    ...sesion('ui-lote-nombre'),
+    lote_id: 'lote-1'
+  }
+  const elementos = vista()
+  const original = { ...registro }
+  await mostrarSesionLecturaEnVista(registro, elementos, {
+    ...consultas,
+    obtenerLotes: async () => [
+      { lote_id: 'lote-2', nombre: 'Otro lote', codigo: 'L2' },
+      { lote_id: 'lote-1', nombre: '  Arándano Norte  ', codigo: 'L1' }
+    ]
+  })
+  assert.equal(elementos.sesionLote.textContent, 'Arándano Norte')
+  assert.deepEqual(registro, original)
+})
+
+test('la sesión conserva el nombre guardado sin lote local y no muestra el código', async () => {
+  for (const [nombre, esperado] of [
+    ['Campo Norte', 'Campo Norte'],
+    [undefined, 'Lote sin nombre']
+  ]) {
+    const elementos = vista()
+    await mostrarSesionLecturaEnVista(
+      { ...sesion('ui-lote-ausente'), lote_id: 'lote-1', lote_nombre: nombre },
+      elementos,
+      { ...consultas, obtenerLotes: async () => [] }
+    )
+    assert.equal(elementos.sesionLote.textContent, esperado)
+  }
+})
+
+test('las tarjetas de sesiones activas muestran el nombre del lote desde la caché local', async () => {
+  const sesiones = [
+    { ...sesion('tarjeta-local'), lote_id: 'lote-1', id: 'tarjeta-local' },
+    {
+      ...sesion('tarjeta-guardada'),
+      lote_id: 'lote-2',
+      lote_nombre: 'Campo Sur',
+      id: 'tarjeta-guardada'
+    },
+    { ...sesion('tarjeta-sin-nombre'), lote_id: 'lote-3', id: 'tarjeta-sin-nombre' }
+  ]
+  const crearNodo = () => ({
+    ...elemento(),
+    children: [],
+    replaceChildren() {
+      this.children = []
+    },
+    append(...hijos) {
+      this.children.push(...hijos)
+    },
+    addEventListener() {}
+  })
+  const tarjetas = crearNodo()
+  let consultasLotes = 0
+  const main = readFileSync(new URL('../src/main.js', import.meta.url), 'utf8')
+  const contexto = {
+    operador: { dni: '12345678' },
+    obtenerSesionesActivas: async () => sesiones,
+    obtenerLotes: async () => {
+      consultasLotes++
+      return [{ lote_id: 'lote-1', codigo: 'L1', nombre: ' Campo Norte ' }]
+    },
+    contarLecturasSesion: async () => 0,
+    sesionesRestaurables: tarjetas,
+    document: { createElement: crearNodo }
+  }
+  runInNewContext(
+    main.slice(
+      main.indexOf('async function mostrarSesionesActivas()'),
+      main.indexOf('// CERRAR SESIÓN')
+    ),
+    contexto
+  )
+  await contexto.mostrarSesionesActivas()
+  assert.deepEqual(
+    tarjetas.children.slice(1).map((fila) => fila.children[0].textContent),
+    [
+      'Juan · Campo Norte · Uva',
+      'Juan · Campo Sur · Uva',
+      'Juan · Lote sin nombre · Uva'
+    ]
+  )
+  assert.equal(consultasLotes, 1)
+  assert.equal(sesiones[0].lote_codigo, 'L1')
+})
 
 test('una sesión válida oculta el error previo de configuración', async () => {
   const elementos = vista()

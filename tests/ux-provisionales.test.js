@@ -295,6 +295,34 @@ test('jabero nuevo offline crea provisional y una operación; escaneo repetido n
   assert.equal((await local.obtenerColaCompleta()).length, 1)
 })
 
+test('jaberos muestra Activo e Inactivo y conserva Pendiente y Error al refrescar', async () => {
+  const trabajadores = [
+    { dni: '80000001', nombre: 'Ana', activo: true, roles: ['JABERO'] },
+    { dni: '80000002', nombre: 'Bruno', activo: false, roles: ['JABERO'] },
+    { dni: '80000003', nombre: 'Carla', activo: true, roles: [] },
+    { dni: '80000004', nombre: 'Diego', activo: true, roles: [] }
+  ]
+  await local.guardarCache(base(trabajadores))
+  await local.registrarJaberoOffline('47480378', '80000003')
+  const rechazo = await local.registrarJaberoOffline('47480378', '80000004')
+  await local.marcarJabero('80000004', 'ERROR', rechazo.id)
+  await local.marcarOperacionError(rechazo.id, 'Registro rechazado')
+  const vista = consulta('jaberos-campania', async () => ({
+    data: base(trabajadores.slice(0, 2))
+  }))
+  const estados = () =>
+    vista.nodes.consultaTablaBody.children.map(
+      (fila) => fila.children[2].children[0].textContent
+    )
+  await vista.abrir()
+  assert.deepEqual(estados(), ['Activo', 'Inactivo', 'Pendiente', 'Error'])
+  await vista.actualizar()
+  assert.deepEqual(estados(), ['Activo', 'Inactivo', 'Pendiente', 'Error'])
+  vista.nodes.consultaBusqueda.value = '80000003'
+  vista.ctx.renderJaberosCampania()
+  assert.deepEqual(estados(), ['Pendiente'])
+})
+
 test('un jabero de campaña puede reasignarse sin duplicar el rol local', async () => {
   await local.guardarCache(
     base([{ dni: '76338971', nombre: 'Marco', activo: true, roles: ['JABERO'] }])

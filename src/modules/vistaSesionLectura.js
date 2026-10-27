@@ -63,7 +63,8 @@ export async function mostrarSesionLecturaEnVista(
     obtenerUltimaLecturaSesion,
     contarLecturasCosechador,
     obtenerTicket,
-    obtenerTrabajador
+    obtenerTrabajador,
+    obtenerLotes
   }
 ) {
   const total = await contarLecturasSesion(sesion.sesion_id)
@@ -78,10 +79,14 @@ export async function mostrarSesionLecturaEnVista(
       (await obtenerTrabajador(ultima.cosechador_dni))?.nombre
     : null
 
+  const lotes = await obtenerLotes()
+  const lote = lotes.find((item) => item.lote_id === sesion.lote_id)
+
   configuracionLectura.classList.add('oculto')
   sesionLecturaActiva.classList.remove('oculto')
   sesionJabero.textContent = sesion.jabero
-  sesionLote.textContent = sesion.lote_codigo
+  sesionLote.textContent =
+    lote?.nombre?.trim() || sesion.lote_nombre?.trim() || 'Lote sin nombre'
   sesionVariedad.textContent = sesion.variedad
   totalSesion.textContent = total
   mostrarContadorCosechador(nombre, cantidad, {

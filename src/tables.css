@@ -1,0 +1,181 @@
+/* Misma base que portal-tables.css del Portal, con densidad para móvil/PDA. */
+.industrial-table-wrap,
+.table-scroll {
+  --table-font-size: 1rem;
+  --table-cell-padding-x: 16px;
+  --table-edge-padding: 24px;
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  border: 0;
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  background: var(--portal-summary-surface);
+  box-shadow: none;
+}
+
+.table-scroll:empty {
+  display: none;
+}
+
+.industrial-table,
+.table-scroll table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--portal-summary-surface);
+  color: var(--portal-ink);
+  font-family: inherit;
+  font-size: var(--table-font-size);
+  line-height: 1.45;
+}
+
+.industrial-table {
+  table-layout: fixed;
+}
+
+.industrial-table :is(th, td),
+.table-scroll :is(th, td) {
+  height: var(--touch-target-min);
+  padding: var(--space-2) var(--table-cell-padding-x);
+  border: 2px solid var(--portal-table-divider);
+  font: inherit;
+  font-weight: 400;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+.industrial-table :is(th, td):first-child,
+.table-scroll :is(th, td):first-child {
+  padding-left: var(--table-edge-padding);
+  border-left: 0;
+}
+
+.industrial-table :is(th, td):last-child,
+.table-scroll :is(th, td):last-child {
+  padding-right: var(--table-edge-padding);
+  border-right: 0;
+}
+
+.industrial-table thead th,
+.table-scroll thead th {
+  border-top: 0;
+  background: var(--portal-table-head);
+  color: var(--color-white);
+  font-weight: 500;
+}
+
+.industrial-table tbody td,
+.table-scroll tbody td {
+  background: var(--portal-summary-surface);
+  color: var(--portal-ink);
+}
+
+.industrial-table tbody tr:is(:hover, :focus-within) td,
+.table-scroll tbody tr:is(:hover, :focus-within) td {
+  background: var(--portal-table-hover);
+}
+
+.industrial-table__person strong,
+.industrial-table__ticket strong,
+.industrial-table__count {
+  font-weight: 500;
+}
+
+.table-scroll :is(th, td) {
+  min-width: 100px;
+}
+
+/* Reserva espacio para el DNI completo y la etiqueta de estado en el PDA. */
+.industrial-table:has(.consulta-jaberos) :is(th, td):first-child {
+  width: 40%;
+}
+
+.industrial-table:has(.consulta-jaberos) :is(th, td):nth-child(2) {
+  width: 28%;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.industrial-table:has(.consulta-jaberos) :is(th, td):last-child {
+  width: 32%;
+  white-space: nowrap;
+}
+
+.industrial-table:has(.consulta-jaberos) .sync-badge {
+  display: inline-flex;
+  max-width: 100%;
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+/* El bloque vacío conserva los mensajes operativos de cada consulta. */
+.industrial-table-wrap:has(> .empty-state:not(.oculto)),
+.table-scroll:has(> p) {
+  border-radius: var(--radius-xl);
+  background: var(--portal-table-empty);
+}
+
+.industrial-table-wrap > .empty-state {
+  min-height: 240px;
+  gap: var(--space-3);
+  align-content: center;
+  padding: var(--space-8) var(--space-6);
+  background: var(--portal-table-empty);
+  color: var(--portal-muted);
+}
+
+.industrial-table-wrap > .empty-state .empty-state__icon {
+  width: 56px;
+  height: 56px;
+  margin: 0;
+  background: transparent;
+  color: var(--portal-muted);
+}
+
+.industrial-table-wrap > .empty-state .empty-state__icon svg {
+  width: 40px;
+  height: 40px;
+}
+
+.industrial-table-wrap > .empty-state strong {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  font-weight: 500;
+}
+
+.industrial-table-wrap > .empty-state p {
+  margin: 0;
+  color: var(--portal-muted);
+}
+
+.table-scroll > p {
+  margin: 0;
+  padding: var(--space-8) var(--space-6);
+  background: var(--portal-table-empty);
+  color: var(--portal-muted);
+  text-align: center;
+}
+
+@media (max-width: 480px) {
+  .industrial-table-wrap,
+  .table-scroll {
+    --table-font-size: 0.875rem;
+    --table-cell-padding-x: 8px;
+    --table-edge-padding: 16px;
+  }
+
+  .industrial-table thead th {
+    font-size: var(--font-size-sm);
+    line-height: 1.3;
+  }
+
+  .ranking-table :is(th, td):first-child {
+    padding-inline: var(--space-2);
+  }
+
+  .industrial-table-wrap > .empty-state {
+    min-height: 224px;
+    padding: var(--space-6) var(--space-4);
+  }
+}

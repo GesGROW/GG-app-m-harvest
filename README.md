@@ -32,7 +32,8 @@ Las pruebas SQL y de Google Sheets se mantienen en GG-backend.
 
 La PWA sigue la versión clara del Portal GesGROW: Google Sans Flex, verde profundo,
 superficies crema, acentos lima y controles redondeados. `src/tokens.css` concentra
-la paleta y la tipografía; `src/style.css` adapta los componentes a móvil y PDA,
+la paleta y la tipografía; `src/tables.css` unifica todas las tablas con el Portal.
+`src/style.css` adapta los componentes a móvil y PDA,
 con controles táctiles de al menos 48 px y campos de escaneo de 64 px.
 
 La referencia visual son `owner-home.css`, `account-access.css` y `portal-tables.css`

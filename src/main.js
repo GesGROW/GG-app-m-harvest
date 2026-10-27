@@ -1,4 +1,5 @@
 import './style.css'
+import './tables.css'
 import { enhanceNativeSelects } from '@gesgrow/core/presentation/select.js'
 import { backend } from '@gesgrow/core/backend/backend.js'
 import { casosDeUso } from './application/casosDeUso.js'
@@ -510,6 +511,10 @@ function cerrarMenuContextual() {
 
 async function mostrarConsulta(configuracion) {
   consultaActual = configuracion
+  consultaTablaHead.classList.toggle(
+    'consulta-jaberos',
+    ['jaberos-campania', 'buscar-jabero'].includes(configuracion.id)
+  )
   tituloConsultaHeader.textContent = configuracion.titulo
   btnActualizarConsulta.classList.remove('oculto')
   consultaFeedback.textContent = ''
@@ -690,15 +695,14 @@ function renderJaberosCampania() {
     dniCell.textContent = trabajador.dni || '—'
 
     const estadoCell = document.createElement('td')
-    const badge = obtenerBadgeEstadoJabero(trabajador.estado_sync_jabero)
-    if (badge) {
-      const estado = document.createElement('span')
-      estado.className = `sync-badge ${badge.clase}`
-      estado.textContent = badge.etiqueta
-      estadoCell.append(estado)
-    } else {
-      estadoCell.textContent = '—'
+    const badge = obtenerBadgeEstadoJabero(trabajador.estado_sync_jabero) ?? {
+      etiqueta: trabajador.activo === false ? 'Inactivo' : 'Activo',
+      clase: trabajador.activo === false ? 'sync-badge--error' : 'sync-badge--active'
     }
+    const estado = document.createElement('span')
+    estado.className = `sync-badge ${badge.clase}`
+    estado.textContent = badge.etiqueta
+    estadoCell.append(estado)
 
     fila.append(nombreCell, dniCell, estadoCell)
     consultaTablaBody.append(fila)
@@ -1837,6 +1841,8 @@ async function mostrarSesionesActivas() {
   sesionesRestaurables.replaceChildren()
   sesionesRestaurables.classList.toggle('oculto', !sesiones.length)
   if (!sesiones.length) return
+  const lotes = await obtenerLotes()
+  const nombresLotes = new Map(lotes.map((lote) => [lote.lote_id, lote.nombre]))
   const titulo = document.createElement('h2')
   titulo.textContent = 'Sesiones de lectura activas'
   sesionesRestaurables.append(titulo)
@@ -1844,7 +1850,11 @@ async function mostrarSesionesActivas() {
     const fila = document.createElement('div')
     fila.className = 'card sesion-restaurable'
     const descripcion = document.createElement('p')
-    descripcion.textContent = `${sesion.jabero} · ${sesion.lote_codigo} · ${sesion.variedad}`
+    const nombreLote =
+      nombresLotes.get(sesion.lote_id)?.trim() ||
+      sesion.lote_nombre?.trim() ||
+      'Lote sin nombre'
+    descripcion.textContent = `${sesion.jabero} · ${nombreLote} · ${sesion.variedad}`
     const total = document.createElement('p')
     total.textContent = `${await contarLecturasSesion(sesion.id)} jabas locales`
     const continuar = document.createElement('button')
@@ -2364,7 +2374,8 @@ async function mostrarSesionLectura() {
       obtenerUltimaLecturaSesion,
       contarLecturasCosechador,
       obtenerTicket,
-      obtenerTrabajador
+      obtenerTrabajador,
+      obtenerLotes
     }
   )
 }
