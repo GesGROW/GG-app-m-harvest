@@ -1,5 +1,6 @@
 import './style.css'
 import './tables.css'
+import { cerrarSesionDispositivo } from './modules/sesionDispositivo.js'
 import { enhanceNativeSelects } from '@gesgrow/core/presentation/select.js'
 import { backend } from '@gesgrow/core/backend/backend.js'
 import { casosDeUso } from './application/casosDeUso.js'
@@ -1903,7 +1904,13 @@ async function mostrarSesionesActivas() {
 
 btnSalirMenu.addEventListener('click', cerrarSesion)
 
-function cerrarSesion() {
+async function cerrarSesion() {
+  try {
+    await cerrarSesionDispositivo()
+  } catch (error) {
+    alert(error.message)
+    return
+  }
   operador = null
   cosechador = null
   sesionLectura = null

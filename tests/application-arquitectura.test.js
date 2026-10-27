@@ -102,10 +102,18 @@ test('los casos de uso no interpretan comandos, payloads o transacciones de la c
 
 test('bootstrap construye e inyecta los adapters antes de cargar presentación', () => {
   const bootstrap = fuentes.get(path.join(src, 'bootstrap.js'))
-  assert.match(bootstrap, /configurarCasosDeUso\(\s*crearCasosDeUso\(/)
+  assert.match(bootstrap, /const casos = crearCasosDeUso\(/)
+  assert.ok(
+    bootstrap.indexOf('const casos = crearCasosDeUso(') <
+      bootstrap.indexOf('configurarCasosDeUso(')
+  )
   assert.match(bootstrap, /offline:\s*crearAdaptadoresOffline\(\)/)
   assert.ok(
     bootstrap.indexOf('configurarCasosDeUso(') <
+      bootstrap.indexOf("import('./main.js')")
+  )
+  assert.ok(
+    bootstrap.indexOf('await configurarVinculacionDispositivo(') <
       bootstrap.indexOf("import('./main.js')")
   )
   const fachada = fuentes.get(path.join(src, 'application', 'casosDeUso.js'))

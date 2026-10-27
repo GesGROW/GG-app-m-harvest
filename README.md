@@ -1,7 +1,9 @@
 # GesGROW · Aplicación móvil de Cosecha
 
-PWA de campo con Vite, service worker e IndexedDB. Conserva el ingreso operativo por
-DNI, captura de tickets y cola offline. Esta separación no cambia el contrato del PDA.
+PWA de campo con Vite, service worker e IndexedDB. La primera pantalla permite
+[vincular el PDA por QR](docs/vinculacion-pda.md) e ingresar con la cuenta del
+supervisor. Conserva captura de tickets y cola offline durante la transición
+de los contratos operativos existentes.
 
 ## Desarrollo
 

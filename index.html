@@ -85,7 +85,81 @@
     </svg>
 
     <main class="app">
-      <section id="vista-login" class="pantalla pantalla-login">
+      <section
+        id="vista-vinculacion"
+        class="pantalla pantalla-login"
+        aria-labelledby="pda-titulo"
+      >
+        <div class="login-card card pda-card">
+          <img
+            class="login-brand"
+            src="/brand/gesgrow-logo.png"
+            width="2204"
+            height="713"
+            alt="GesGROW"
+          />
+          <div class="pda-symbol" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <rect width="14" height="20" x="5" y="2" rx="2" />
+              <path d="M12 18h.01" />
+            </svg>
+          </div>
+          <div class="login-copy">
+            <h1 id="pda-titulo">Vincular este PDA</h1>
+            <p id="pda-detalle" class="subtitulo">
+              Escanea el QR de la empresa con la cámara.
+            </p>
+          </div>
+          <p id="pda-empresa" class="pda-company"></p>
+          <button id="pda-cambiar-qr" type="button" class="btn-secondary oculto">
+            Escanear otro QR
+          </button>
+          <div id="pda-form-qr" class="form-stack">
+            <button id="pda-camara" type="button" class="btn-primary">
+              Escanear QR con cámara
+            </button>
+            <video
+              id="pda-video"
+              class="pda-camera oculto"
+              playsinline
+              muted
+              aria-label="Cámara para leer el QR"
+            ></video>
+            <button id="pda-detener-camara" type="button" class="btn-secondary oculto">
+              Cerrar cámara
+            </button>
+          </div>
+          <form id="pda-form-cuenta" class="form-stack">
+            <label for="pda-nombre">Nombre del PDA</label>
+            <input
+              id="pda-nombre"
+              type="text"
+              value="PDA de Cosecha"
+              maxlength="80"
+              autocomplete="off"
+              required
+            />
+            <label for="pda-email">Correo del supervisor</label>
+            <input id="pda-email" type="email" autocomplete="username" required />
+            <label for="pda-password">Contraseña</label>
+            <input
+              id="pda-password"
+              type="password"
+              autocomplete="current-password"
+              required
+            />
+            <button type="submit" class="btn-primary">Iniciar sesión</button>
+          </form>
+          <p id="pda-mensaje" class="mensaje" role="status" aria-live="polite"></p>
+          <button id="pda-continuar" type="button" class="btn-primary oculto">
+            Vincular PDA
+          </button>
+          <button id="pda-cambiar-cuenta" type="button" class="btn-secondary oculto">
+            Cambiar de cuenta
+          </button>
+        </div>
+      </section>
+      <section id="vista-login" class="pantalla pantalla-login oculto">
         <div class="login-card card">
           <img
             class="login-brand"

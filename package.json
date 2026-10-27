@@ -21,8 +21,9 @@
     "vite-plugin-pwa": "^1.3.0"
   },
   "dependencies": {
+    "@gesgrow/core": "file:vendor/gesgrow-core-0.1.0.tgz",
     "@supabase/supabase-js": "^2.117.2",
     "idb": "^8.0.3",
-    "@gesgrow/core": "file:vendor/gesgrow-core-0.1.0.tgz"
+    "jsqr": "1.4.0"
   }
 }

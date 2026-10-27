@@ -79,7 +79,8 @@ test('el arranque configura el puerto antes de cargar la aplicación', () => {
   assert.match(html, /<script type="module" src="\/src\/bootstrap.js"><\/script>/)
   const bootstrap = fuentes.get(path.join(src, 'bootstrap.js'))
   assert.ok(
-    bootstrap.indexOf('configurarBackend(crearSupabaseBackend(supabase))') <
-      bootstrap.indexOf("import('./main.js')")
+    bootstrap.indexOf(
+      'configurarBackend(protegerBackendDispositivo(campo, dispositivo))'
+    ) < bootstrap.indexOf("import('./main.js')")
   )
 })

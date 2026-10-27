@@ -1,6 +1,9 @@
 import { openDB } from 'idb'
 import { migrarOwnershipLocal, validarOwnershipCache } from './tenants.js'
-import { tenantDeRecurso, exigirMismoTenant } from '@gesgrow/core/contexts/platform/index.js'
+import {
+  tenantDeRecurso,
+  exigirMismoTenant
+} from '@gesgrow/core/contexts/platform/index.js'
 import { evaluarDescarteOperacion } from './cola.js'
 import { crearStoresHarvest, crearHarvestLocal, storesHarvest } from './harvest.js'
 import {
@@ -66,6 +69,34 @@ const rawDbPromise = openDB(DB_NAME, DB_VERSION, {
     if (oldVersion < 5) crearStoresHarvest(db)
   }
 }).then(migrarOwnershipLocal)
+
+export async function comprobarTrabajoDispositivo(
+  tenantId,
+  dni,
+  { salir = false } = {}
+) {
+  const db = await rawDbPromise
+  const cola = (await db.getAll('cola')).filter(
+    (op) => !['SINCRONIZADA', 'DESCARTADA'].includes(op.estado)
+  )
+  const sesiones = (await db.getAll('sesiones')).filter((s) => s.estado === 'ACTIVA')
+  if (salir && (cola.length || sesiones.length))
+    throw new Error(
+      'Sincroniza los registros pendientes y finaliza las sesiones de lectura antes de cambiar de supervisor.'
+    )
+  for (const dato of [
+    ...cola.map((op) => ({ ...op.payload, tenant_id: op.tenant_id })),
+    ...sesiones
+  ]) {
+    if (
+      (dato.tenant_id ?? dato.tenantId) !== tenantId ||
+      (dato.dniOperador ?? dato.dni_operador) !== dni
+    )
+      throw new Error(
+        'Hay trabajo pendiente de otra cuenta o empresa. Conserva estos datos y resuélvelo con el supervisor anterior antes de continuar.'
+      )
+  }
+}
 const harvestLocal = crearHarvestLocal({ dbPromise: rawDbPromise, crearOperacionEnTx })
 export const obtenerModeloOperativoHarvest = (campaniaId) =>
   harvestLocal.obtenerModeloOperativo(campaniaId)

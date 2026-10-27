@@ -3,7 +3,7 @@ import { configurarCasosDeUso } from './application/casosDeUso.js'
 import { crearAdaptadoresOffline } from './infrastructure/offline/crearAdaptadoresOffline.js'
 import { backend, configurarBackend } from '@gesgrow/core/backend/backend.js'
 import { crearSupabaseBackend } from './infrastructure/supabase/backendAdapter.js'
-import { supabase } from './infrastructure/supabase/client.js'
+import { supabase, supabaseOperativo } from './infrastructure/supabase/client.js'
 import { crearIdentitySupabase } from './infrastructure/supabase/identityAdapter.js'
 import { crearAccesoSupabase } from './infrastructure/supabase/accesoAdapter.js'
 import { crearAccesoEmpresa } from './application/accesoEmpresa.js'
@@ -11,6 +11,18 @@ import { crearEntitlementsSupabase } from './infrastructure/supabase/platformEnt
 import { crearComercialSupabase } from './infrastructure/supabase/platformComercialAdapter.js'
 import { crearAdministracionComercial } from '@gesgrow/core/contexts/platform/index.js'
 import { configurarVistaAccesoEmpresa } from './modules/accesoEmpresa.js'
+import { crearVinculacionDispositivo } from './application/vinculacionDispositivo.js'
+import { crearDispositivoIndexedDB } from './infrastructure/indexeddb/dispositivoAdapter.js'
+import { crearDispositivoSupabase } from './infrastructure/supabase/dispositivoAdapter.js'
+import { comprobarTrabajoDispositivo } from './offline/db.js'
+import { configurarVinculacionDispositivo } from './modules/vinculacionDispositivo.js'
+import { configurarSalidaDispositivo } from './modules/sesionDispositivo.js'
+import './style.css'
+import './vinculacion.css'
+import {
+  protegerBackendDispositivo,
+  protegerCasosDispositivo
+} from './application/protegerDispositivo.js'
 
 const accesoCuenta = crearAccesoEmpresa({
   identity: crearIdentitySupabase(supabase),
@@ -22,22 +34,53 @@ const administracionComercial = crearAdministracionComercial({
   comercial: crearComercialSupabase(supabase)
 })
 
-configurarBackend(crearSupabaseBackend(supabase))
-configurarCasosDeUso(
-  crearCasosDeUso({
-    backend,
-    offline: crearAdaptadoresOffline(),
-    estaEnLinea: () => navigator.onLine,
-    generarId: () => crypto.randomUUID(),
-    ahora: () => new Date().toISOString(),
-    registrarError: (...args) => console.error(...args)
-  })
-)
-// Cargar la aplicación después de configurar el puerto, incluida la restauración
-// de sesión y sincronización automática que se ejecutan al importar main.
-import('./main.js').then(() =>
-  configurarVistaAccesoEmpresa({
-    acceso: accesoCuenta,
-    comercial: administracionComercial
-  })
-)
+let pantallaPda,
+  cargado = false
+const dispositivo = crearVinculacionDispositivo({
+  remoto: crearDispositivoSupabase(supabase),
+  almacen: crearDispositivoIndexedDB(),
+  enLinea: () => navigator.onLine,
+  comprobarDatos: comprobarTrabajoDispositivo,
+  alBloquear: (error) => pantallaPda?.bloquear(error)
+})
+const campo = crearSupabaseBackend(supabaseOperativo)
+// Componer los contratos existentes sin reenviar comandos de otra cuenta.
+configurarBackend(protegerBackendDispositivo(campo, dispositivo))
+const casos = crearCasosDeUso({
+  backend,
+  offline: crearAdaptadoresOffline(),
+  estaEnLinea: () => navigator.onLine,
+  generarId: () => crypto.randomUUID(),
+  ahora: () => new Date().toISOString(),
+  registrarError: (...args) => console.error(...args)
+})
+configurarCasosDeUso(protegerCasosDispositivo(casos, dispositivo))
+configurarSalidaDispositivo(async () => {
+  await dispositivo.salir()
+  location.reload()
+})
+pantallaPda = await configurarVinculacionDispositivo({
+  servicio: dispositivo,
+  origenesQR: ['https://gg-app-m-harvest.vercel.app'],
+  alIngresar: async (operador) => {
+    sessionStorage.setItem('operador_dni', operador.dni)
+    document.querySelector('#vista-vinculacion').classList.add('oculto')
+    if (cargado) {
+      location.reload()
+      return
+    }
+    cargado = true
+    await import('./main.js')
+    configurarVistaAccesoEmpresa({
+      acceso: accesoCuenta,
+      comercial: administracionComercial
+    })
+  }
+})
+await pantallaPda?.restaurar()
+const revisar = () => {
+  if (cargado) dispositivo.validar({ forzar: true }).catch(() => {})
+}
+window.addEventListener('online', revisar)
+window.addEventListener('focus', revisar)
+setInterval(revisar, 30000)
