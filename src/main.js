@@ -425,7 +425,6 @@ let operador = null
 const vistaCultivos = document.querySelector('#vista-cultivos')
 const opcionesCultivo = document.querySelector('#opciones-cultivo')
 const cultivoMensaje = document.querySelector('#cultivo-mensaje')
-const menuCampania = document.querySelector('#menu-campania')
 
 async function consultarCampania(consultar, parametros) {
   if (!operador?.campania?.id)
@@ -2026,9 +2025,6 @@ function mostrarMenu() {
   if (!verificarVigenciaOperador()) return
   mostrarVista(vistaMenu)
   menuOperador.textContent = operador.nombre
-  menuCampania.textContent = operador.campania
-    ? `${operador.campania.cultivo_nombre} · ${operador.campania.nombre}`
-    : ''
   actualizarEstadoConexion()
   mostrarSesionesActivas().catch(console.error)
 }
@@ -2187,7 +2183,7 @@ async function cargarLotes() {
     for (const lote of lotes) {
       const option = document.createElement('option')
       option.value = lote.lote_id
-      option.textContent = lote.codigo
+      option.textContent = lote.nombre?.trim() || 'Lote sin nombre'
       loteLectura.appendChild(option)
     }
     loteLectura.disabled = false

@@ -12,36 +12,36 @@ export default defineConfig({
         name: 'Sistema de Control de Cosecha',
         short_name: 'Cosecha Quijas',
 
-        description:
-          'Sistema de Control de Cosecha',
+        description: 'Sistema de Control de Cosecha',
 
         start_url: '/',
         scope: '/',
 
         display: 'standalone',
 
-        theme_color: '#1668c7',
-        background_color: '#f3f5f7',
+        theme_color: '#022f2a',
+        background_color: '#ffffff',
 
         icons: [
           {
             src: '/icons/icon-192.png',
             sizes: '192x192',
             type: 'image/png',
-            purpose: 'any',
+            purpose: 'any'
           },
           {
             src: '/icons/icon-512.png',
             sizes: '512x512',
             type: 'image/png',
-            purpose: 'any',
-          },
-        ],
+            purpose: 'any'
+          }
+        ]
       },
 
       workbox: {
         cleanupOutdatedCaches: true,
-      },
-    }),
-  ],
+        globPatterns: ['**/*.{js,wasm,css,html,png,svg,ico,webp,woff,woff2,ttf}']
+      }
+    })
+  ]
 })

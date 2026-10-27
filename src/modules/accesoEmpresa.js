@@ -99,7 +99,7 @@ export function configurarVistaAccesoEmpresa({ acceso, comercial }) {
     else if (perfil.empresas.length > 1)
       estado('Seleccione la empresa con la que quiere trabajar.')
   }
-  document.querySelector('#btn-ingreso-cuenta').addEventListener('click', () => {
+  document.querySelector('#btn-ingreso-cuenta')?.addEventListener('click', () => {
     mostrar()
     vista.querySelector('#cuenta-email').focus()
     tarea(async () => {

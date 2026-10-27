@@ -28,6 +28,19 @@ npm run preview
 Las pruebas operativas y de arquitectura se ejecutan dentro de este repositorio.
 Las pruebas SQL y de Google Sheets se mantienen en GG-backend.
 
+## Diseño
+
+La PWA sigue la versión clara del Portal GesGROW: Google Sans Flex, verde profundo,
+superficies crema, acentos lima y controles redondeados. `src/tokens.css` concentra
+la paleta y la tipografía; `src/style.css` adapta los componentes a móvil y PDA,
+con controles táctiles de al menos 48 px y campos de escaneo de 64 px.
+
+La referencia visual son `owner-home.css`, `account-access.css` y `portal-tables.css`
+del Portal. El logotipo y la fotografía se conservan en `public/brand/`, y las
+fuentes en `src/assets/fonts/`. Son copias locales: la aplicación no depende del
+checkout del Portal ni de un proveedor externo de fuentes. El service worker
+incluye estos recursos para que el diseño esté disponible sin conexión.
+
 ## Publicación y PDA
 
 Publicar dist/ en un origen HTTPS dedicado, distinto del Portal. El manifiesto y el

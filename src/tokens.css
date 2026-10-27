@@ -1,0 +1,129 @@
+/* GesGROW: referencia del Portal en owner-home.css, account-access.css y
+   portal-tables.css. Recursos locales para conservar la identidad sin conexión. */
+@font-face {
+  font-family: 'Google Sans Flex';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./assets/fonts/google-sans-flex-400.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'Google Sans Flex';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('./assets/fonts/google-sans-flex-500.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'Google Sans Flex';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('./assets/fonts/google-sans-flex-600.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'Google Sans Flex';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('./assets/fonts/google-sans-flex-700.ttf') format('truetype');
+}
+
+:root {
+  color-scheme: light;
+  --font-family-sans:
+    'Google Sans Flex', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --portal-ink: #022f2a;
+  --portal-surface: #e3e4d6;
+  --portal-summary-surface: #eff0e2;
+  --portal-selected: #c1f13d;
+  --portal-action: #93b730;
+  --portal-action-hover: #83a429;
+  /* Verde del encabezado del Portal, oscurecido para texto pequeño en el PDA. */
+  --portal-table-head: #18860e;
+  --portal-muted: #52635a;
+  --portal-border: #cbd0c4;
+
+  --color-brand-950: var(--portal-ink);
+  --color-brand-900: #173f2b;
+  --color-brand-800: #1f5a3a;
+  --color-brand-700: #26734a;
+  --color-brand-600: #2f8a57;
+  --color-brand-500: #3a9c66;
+  --color-brand-200: #cfe6d7;
+  --color-brand-100: #e8f4ec;
+  --color-brand-050: #f4faf6;
+  --color-harvest-700: #8d6a1f;
+  --color-harvest-600: #a67c22;
+  --color-harvest-500: #c69a2d;
+  --color-harvest-400: #ddb557;
+  --color-harvest-300: #e7c97d;
+  --color-harvest-100: #f8f0d8;
+  --color-ink-950: var(--portal-ink);
+  --color-ink-900: var(--portal-ink);
+  --color-ink-700: #46534b;
+  --color-ink-600: var(--portal-muted);
+  --color-ink-500: #5d6a62;
+  --color-line-300: var(--portal-border);
+  --color-line-200: #dce0d3;
+  --color-surface-150: var(--portal-surface);
+  --color-surface-100: var(--portal-summary-surface);
+  --color-surface-050: #f8faf4;
+  --color-white: #fff;
+  --color-success-bg: #e8f4ec;
+  --color-success-fg: #1f6b43;
+  --color-warning-bg: #f8f0d8;
+  --color-warning-fg: #7a5a16;
+  --color-error-bg: #fbe9e7;
+  --color-error-fg: #b63930;
+  --color-error-border: #f2c1bc;
+  --color-info-bg: #e5eff8;
+  --color-info-fg: #365f8a;
+  --color-disabled-bg: #eef1e8;
+  --color-disabled-fg: #687367;
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.875rem;
+  --font-size-md: 0.9375rem;
+  --font-size-base: 1rem;
+  --font-size-lg: 1.125rem;
+  --font-size-xl: 1.25rem;
+  --font-size-2xl: 1.5rem;
+  --font-size-3xl: 1.875rem;
+  --font-size-4xl: 2.125rem;
+  --font-size-metric: 2.5rem;
+  --radius-sm: 12px;
+  --radius-md: 18px;
+  --radius-lg: 24px;
+  --radius-xl: 30px;
+  --radius-round: 999px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --touch-target-min: 48px;
+  --control-height: 56px;
+  --scan-input-height: 64px;
+  --icon-button-size: 48px;
+  --motion-fast: 120ms;
+  --motion-base: 160ms;
+  --motion-slow: 220ms;
+  --shadow-sm: 0 3px 10px rgb(21 32 25 / 4%);
+  --shadow-md: 0 4px 14px rgb(21 32 25 / 8%);
+  --shadow-lg: 0 18px 48px rgb(2 47 42 / 16%);
+
+  /* Puente para los selects compartidos de @gesgrow/core. */
+  --color-text-primary: var(--portal-ink);
+  --color-text-secondary: var(--portal-muted);
+  --color-surface-card: var(--color-white);
+  --color-surface-subtle: var(--portal-summary-surface);
+  --color-surface-raised: var(--color-white);
+  --color-border-default: var(--portal-border);
+  --color-border-focus: var(--portal-ink);
+  --color-brand-primary: var(--portal-ink);
+  --color-brand-soft: var(--portal-selected);
+}
