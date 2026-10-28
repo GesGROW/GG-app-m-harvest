@@ -6,6 +6,7 @@ import {
 } from '@gesgrow/core/contexts/platform/index.js'
 import { evaluarDescarteOperacion } from './cola.js'
 import { crearStoresHarvest, crearHarvestLocal, storesHarvest } from './harvest.js'
+import { procesarEnLotes } from './lotesPersistencia.js'
 import {
   modeloOperativoHarvest,
   EscrituraLegacyRetirada
@@ -256,9 +257,9 @@ async function reemplazarCacheEnTx(tx, cache) {
   await lotesStore.clear()
   await ticketsStore.clear()
 
-  for (const trabajador of cache.trabajadores) {
-    await trabajadoresStore.put(trabajador)
-  }
+  await procesarEnLotes(cache.trabajadores, (trabajador) =>
+    trabajadoresStore.put(trabajador)
+  )
   for (const local of cosechadoresProvisionales) {
     const actual = await trabajadoresStore.get(local.dni)
     if (!actual) {
@@ -291,21 +292,19 @@ async function reemplazarCacheEnTx(tx, cache) {
     await trabajadoresStore.put(actual)
   }
 
-  for (const lote of cache.lotes) {
-    await lotesStore.put(lote)
-  }
+  await procesarEnLotes(cache.lotes, (lote) => lotesStore.put(lote))
 
-  for (const ticket of cache.tickets) {
+  await procesarEnLotes(cache.tickets, (ticket) => {
     const ticketLocal = ticketsLocalesPorCodigo.get(ticket.codigo_ticket)
     const nombreServidor = nombresServidor.get(ticket.cosechador_dni)
-    await ticketsStore.put({
+    return ticketsStore.put({
       ...ticket,
       ...(nombreServidor ? { cosechador: nombreServidor } : {}),
       fecha_asignacion:
         ticket.fecha_asignacion ?? ticketLocal?.fecha_asignacion ?? null,
       estado_sync: 'SINCRONIZADO'
     })
-  }
+  })
 
   for (const ticket of ticketsPendientes) {
     const nombreServidor = nombresServidor.get(ticket.cosechador_dni)

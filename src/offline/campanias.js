@@ -1,3 +1,5 @@
+import { procesarEnLotes } from './lotesPersistencia.js'
+
 let campaniaId = ''
 export const obtenerContextoCampania = () => campaniaId
 export const establecerContextoCampania = (id) => {
@@ -30,20 +32,27 @@ export function conCampania(db, id = obtenerContextoCampania()) {
           return async (valor) =>
             target[prop]({ ...(await propietario(valor)), campania_id: id })
         if (prop === 'getAll')
-          return async () =>
-            Promise.all(
-              (await target.getAll())
-                .filter((fila) => (fila.campania_id ?? '') === id)
-                .map(propietario)
+          return async () => {
+            const filas = (await target.getAll()).filter(
+              (fila) => (fila.campania_id ?? '') === id
             )
+            if (!filas.length) return filas
+            // Un solo propietario para esta lectura; cada fila sigue validándose.
+            const tenantId = tenantDeRecurso(await meta.get(`campania:${id}`))
+            return filas.map((fila) => {
+              if (fila.tenantId !== undefined || fila.tenant_id !== undefined)
+                exigirMismoTenant({ tenantId }, fila)
+              return { ...fila, tenant_id: tenantId }
+            })
+          }
         if (prop === 'clear')
           return async () => {
-            for (const fila of await target.getAll()) {
-              if ((fila.campania_id ?? '') === id)
-                await target.delete(
-                  claves[nombre] ? [id, fila[claves[nombre]]] : fila.lote_id
-                )
-            }
+            const filas = (await target.getAll()).filter(
+              (fila) => (fila.campania_id ?? '') === id
+            )
+            await procesarEnLotes(filas, (fila) =>
+              target.delete(claves[nombre] ? [id, fila[claves[nombre]]] : fila.lote_id)
+            )
           }
         const value = target[prop]
         return typeof value === 'function' ? value.bind(target) : value
@@ -125,4 +134,7 @@ export async function migrarCampaniasLocales(db, tx) {
   }
   if (id) await tx.objectStore('meta').put(campania, `campania:${id}`)
 }
-import { tenantDeRecurso, exigirMismoTenant } from '@gesgrow/core/contexts/platform/index.js'
+import {
+  tenantDeRecurso,
+  exigirMismoTenant
+} from '@gesgrow/core/contexts/platform/index.js'

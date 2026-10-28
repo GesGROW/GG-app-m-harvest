@@ -13,8 +13,12 @@ import { autorizacionOperadorVigente } from '@gesgrow/core/contexts/identity-acc
 import { resolverCampaniaOperador } from '@gesgrow/core/contexts/campaign-management/index.js'
 import { resolverCosechadorLocal } from '@gesgrow/core/contexts/workforce/index.js'
 import { conCampania, obtenerContextoCampania } from './campanias.js'
+import { procesarEnLotes } from './lotesPersistencia.js'
 import { obtenerOperacionesDependientes } from './cola.js'
-import { exigirMismoTenant, tenantDeRecurso } from '@gesgrow/core/contexts/platform/index.js'
+import {
+  exigirMismoTenant,
+  tenantDeRecurso
+} from '@gesgrow/core/contexts/platform/index.js'
 
 export const storesHarvest = [
   'harvestTickets',
@@ -290,7 +294,7 @@ export function crearHarvestLocal({ dbPromise, crearOperacionEnTx }) {
       throw new Error('La instantánea pertenece a otra campaña.')
     // Hechos confirmados inmutables: una respuesta anterior al ACK no deshace
     // asignaciones/consumos confirmados. No hay API de borrado/reasignación.
-    for (const [store, filas, campo, identidad] of [
+    const grupos = [
       [
         'harvestAsignaciones',
         snapshot.asignacionesDeLote,
@@ -312,9 +316,22 @@ export function crearHarvestLocal({ dbPromise, crearOperacionEnTx }) {
       ],
       ['harvestLotes', snapshot.lotesDeTickets, 'id', []],
       ['harvestTickets', snapshot.tickets, 'codigo', ['loteId']]
-    ])
-      for (const fila of filas) {
-        const anterior = await get(tx, store, fila[campo])
+    ]
+    const existentes = new Map(
+      await Promise.all(
+        grupos.map(async ([store, , campo]) => [
+          store,
+          new Map(
+            (await tx.objectStore(store).index('campania').getAll(tx.campaniaId)).map(
+              (fila) => [fila[campo], fila]
+            )
+          )
+        ])
+      )
+    )
+    for (const [store, filas, campo, identidad] of grupos) {
+      await procesarEnLotes(filas, async (fila) => {
+        const anterior = existentes.get(store).get(fila[campo])
         if (
           anterior &&
           identidad.some((clave) => (anterior[clave] ?? null) !== (fila[clave] ?? null))
@@ -335,14 +352,14 @@ export function crearHarvestLocal({ dbPromise, crearOperacionEnTx }) {
             confirmada = { ...fila, versionProduccion: anterior.versionProduccion }
         }
         if (store === 'harvestLotes') {
-          const asignacion = await get(tx, 'harvestAsignaciones', fila.id)
+          const asignacion = existentes.get('harvestAsignaciones').get(fila.id)
           confirmada = {
             ...fila,
             estado: asignacion ? 'ASIGNADO' : 'DISPONIBLE',
             asignacionOperacionId: asignacion?.operacionId ?? null
           }
         } else if (store === 'harvestTickets') {
-          const registro = await get(tx, 'harvestRegistros', fila.codigo)
+          const registro = existentes.get('harvestRegistros').get(fila.codigo)
           confirmada = {
             ...fila,
             estado: registro ? 'UTILIZADO' : 'DISPONIBLE',
@@ -350,10 +367,11 @@ export function crearHarvestLocal({ dbPromise, crearOperacionEnTx }) {
             consumoOperacionId: registro?.operacionId ?? null
           }
         }
-        await tx
-          .objectStore(store)
-          .put({ ...confirmada, tenantId: tenantDeRecurso(snapshot) })
-      }
+        confirmada = { ...confirmada, tenantId: tenantDeRecurso(snapshot) }
+        existentes.get(store).set(fila[campo], confirmada)
+        await tx.objectStore(store).put(confirmada)
+      })
+    }
     if (!confirmacion) {
       const meta = await tx.objectStore('meta').get(`harvest:${tx.campaniaId}`)
       if (
