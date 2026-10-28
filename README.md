@@ -2,7 +2,9 @@
 
 PWA de campo con Vite, service worker e IndexedDB. La primera pantalla permite
 [vincular el PDA por QR](docs/vinculacion-pda.md) e ingresar con la cuenta del
-supervisor. Conserva captura de tickets y cola offline durante la transición
+supervisor mediante DNI y PIN de 4 dígitos. El correo y contraseña solo se usan
+al configurar o recuperar el PIN, después del primer escaneo del QR.
+Conserva captura de tickets y cola offline durante la transición
 de los contratos operativos existentes.
 
 ## Desarrollo

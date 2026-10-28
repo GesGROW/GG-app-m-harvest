@@ -31,7 +31,7 @@ export function crearVinculacionDispositivo({
 }) {
   let actual,
     autorizado,
-    sujetoActual,
+    revision = 0,
     validacion,
     operaciones = 0,
     ocupado = false,
@@ -40,6 +40,7 @@ export function crearVinculacionDispositivo({
     actual?.empresa
       ? { empresa: actual.empresa, nombre: actual.nombre, estado: actual.estado }
       : null
+  const haySesionPin = () => Boolean(actual?.sesionPin?.token)
   function comprobar(r) {
     if (
       !r?.dispositivo ||
@@ -63,14 +64,18 @@ export function crearVinculacionDispositivo({
     return r
   }
   async function validar({ forzar = false } = {}) {
-    if (!actual?.tenantId || actual.estado !== 'VINCULADO' || bloqueado)
+    if (
+      !actual?.tenantId ||
+      actual.estado !== 'VINCULADO' ||
+      bloqueado ||
+      !haySesionPin()
+    )
       throw new Error('Valida el acceso de este PDA antes de continuar.')
     if (validacion) return validacion
     validacion = (async () => {
+      const version = revision
       try {
-        const sujeto = await remoto.sujeto({ verificar: enLinea() })
-        if (!sujeto || (sujetoActual && sujeto !== sujetoActual))
-          throw new Error('Inicia sesión con tu cuenta de supervisor.')
+        const sujeto = actual.sesionPin.usuarioId
         if (!enLinea()) {
           if (actual.autorizacion?.sujeto !== sujeto)
             throw new Error('Conéctate para validar esta cuenta en el PDA.')
@@ -80,11 +85,14 @@ export function crearVinculacionDispositivo({
           !autorizado ||
           ahora() - actual.autorizacion?.comprobadoEn >= 30000
         ) {
-          autorizado = comprobar(await remoto.validar(actual))
-          if ((await remoto.sujeto({ verificar: false })) !== sujeto)
+          const respuesta = comprobar(
+            await remoto.validarPin(actual, actual.sesionPin.token)
+          )
+          if (version !== revision || respuesta.contexto.usuarioId !== sujeto)
             throw new Error(
-              'La cuenta cambió durante la validación. Vuelve a iniciar sesión.'
+              'La cuenta cambió durante la validación. Ingresa de nuevo con DNI y PIN.'
             )
+          autorizado = respuesta
           await comprobarDatos(actual.tenantId, autorizado.operador?.dni)
           actual = {
             ...actual,
@@ -95,13 +103,13 @@ export function crearVinculacionDispositivo({
           await almacen.guardar(actual)
         }
         comprobar(autorizado)
-        sujetoActual = sujeto
         return autorizado
       } catch (error) {
+        if (version !== revision) throw error
         autorizado = null
         bloqueado = true
         if (error.accesoDenegado) {
-          actual = { ...actual, autorizacion: null }
+          actual = { ...actual, autorizacion: null, sesionPin: null }
           await almacen.guardar(actual)
         }
         alBloquear(error)
@@ -133,6 +141,7 @@ export function crearVinculacionDispositivo({
   }
   return Object.freeze({
     vista,
+    haySesionPin,
     async restaurar() {
       actual = await almacen.obtener()
       if (actual?.estado === 'PENDIENTE' && enLinea()) {
@@ -153,10 +162,63 @@ export function crearVinculacionDispositivo({
       if (!enLinea())
         throw new Error('Necesitas conexión para iniciar una nueva sesión.')
       await remoto.iniciarSesion(credenciales)
-      sujetoActual = null
+      // La cuenta completa solo configura el PIN; no abre una jornada operativa.
+      if (actual?.tenantId) await remoto.validar(actual)
+    },
+    async configurarPin(pin) {
+      if (!actual?.tenantId)
+        throw new Error('Primero vincula este PDA escaneando el QR de la empresa.')
+      if (!/^[0-9]{4}$/.test(pin)) throw new Error('El PIN debe contener 4 dígitos.')
+      if (!enLinea()) throw new Error('Conéctate para configurar tu PIN.')
+      if (operaciones)
+        throw new Error('Espera a que termine la operación antes de configurar el PIN.')
+      const r = await remoto.configurarPin(actual, pin)
+      if (!/^[0-9]{8}$/.test(r?.dni))
+        throw new Error('No se pudo confirmar el DNI de la cuenta.')
+      revision++
       autorizado = null
-      bloqueado = false
-      if (actual?.tenantId) return validar({ forzar: true })
+      bloqueado = true
+      actual = { ...actual, autorizacion: null, sesionPin: null }
+      await almacen.guardar(actual)
+      await remoto.salir()
+      return { dni: r.dni }
+    },
+    async iniciarConPin({ dni, pin }) {
+      if (!actual?.tenantId)
+        throw new Error('Primero vincula este PDA escaneando el QR de la empresa.')
+      if (!/^[0-9]{8}$/.test(dni) || !/^[0-9]{4}$/.test(pin))
+        throw new Error('Ingresa tu DNI de 8 dígitos y PIN de 4 dígitos.')
+      if (!enLinea()) throw new Error('Conéctate para iniciar sesión con tu DNI y PIN.')
+      if (ocupado || operaciones)
+        throw new Error(
+          'Espera a que termine la operación antes de cambiar de supervisor.'
+        )
+      ocupado = true
+      try {
+        await comprobarDatos(actual.tenantId, dni)
+        const r = await remoto.iniciarConPin(actual, { dni, pin })
+        if (!r?.ok)
+          throw new Error(r?.mensaje ?? 'No se pudo iniciar sesión con DNI y PIN.')
+        const datos = comprobar(r.datos)
+        if (!/^[0-9a-f]{64}$/.test(r.sesion) || datos.operador?.dni !== dni)
+          throw new Error('La sesión no corresponde al DNI solicitado.')
+        revision++
+        actual = {
+          ...actual,
+          sesionPin: { token: r.sesion, usuarioId: datos.contexto.usuarioId },
+          autorizacion: {
+            sujeto: datos.contexto.usuarioId,
+            datos,
+            comprobadoEn: ahora()
+          }
+        }
+        await almacen.guardar(actual)
+        autorizado = datos
+        bloqueado = false
+        return datos
+      } finally {
+        ocupado = false
+      }
     },
     async vincular(token, nombre) {
       if (ocupado) throw new Error('La vinculación está en curso.')
@@ -186,6 +248,8 @@ export function crearVinculacionDispositivo({
       }
     },
     async continuar() {
+      if (!haySesionPin())
+        throw new Error('Ingresa tu DNI y PIN para comenzar la jornada.')
       bloqueado = false
       return validar({ forzar: true })
     },
@@ -214,7 +278,7 @@ export function crearVinculacionDispositivo({
       }
     },
     async salir() {
-      if (operaciones)
+      if (operaciones || ocupado)
         throw new Error(
           'Espera a que termine la operación antes de cambiar de supervisor.'
         )
@@ -228,9 +292,18 @@ export function crearVinculacionDispositivo({
       }
       bloqueado = true
       autorizado = null
-      sujetoActual = null
-      await remoto.salir()
-      actual = { ...actual, autorizacion: null }
+      revision++
+      if (actual?.sesionPin && enLinea()) {
+        try {
+          await remoto.salirPin(actual, actual.sesionPin.token)
+        } catch (e) {
+          if (!e.accesoDenegado) {
+            bloqueado = bloqueoAnterior
+            throw e
+          }
+        }
+      }
+      actual = { ...actual, autorizacion: null, sesionPin: null }
       await almacen.guardar(actual)
     }
   })

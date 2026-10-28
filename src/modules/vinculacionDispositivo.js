@@ -17,13 +17,11 @@ export async function configurarVinculacionDispositivo({
   const empresa = buscar('pda-empresa'),
     titulo = buscar('pda-titulo'),
     detalle = buscar('pda-detalle')
-  const continuar = buscar('pda-continuar'),
-    cambiar = buscar('pda-cambiar-cuenta')
   const video = buscar('pda-video'),
     camara = buscar('pda-camara'),
     detener = buscar('pda-detener-camara')
   let token = null,
-    conectado = false,
+    etapa = 'qr',
     ocupado = false,
     flujoCamara = null,
     sesionCamara = 0
@@ -41,21 +39,39 @@ export async function configurarVinculacionDispositivo({
   }
   function render() {
     const d = servicio.vista()
-    titulo.textContent = d ? 'PDA vinculado' : 'Vincular este PDA'
-    detalle.textContent = d
-      ? 'Inicia sesión como supervisor para comenzar la jornada.'
-      : 'Escanea el QR de la empresa con la cámara.'
+    const esQr = !d && !token
+    if (esQr) etapa = 'qr'
+    titulo.textContent = esQr
+      ? 'Vincular este PDA'
+      : etapa === 'crear-pin'
+        ? 'Crea tu PIN'
+        : etapa === 'cuenta'
+          ? 'Configurar acceso'
+          : 'Sistema de Control de Cosecha'
+    detalle.textContent = esQr
+      ? 'Escanea el QR de la empresa con la cámara.'
+      : etapa === 'cuenta'
+        ? 'Valida tu cuenta una sola vez para crear o recuperar tu PIN.'
+        : etapa === 'crear-pin'
+          ? 'Crea un PIN de 4 dígitos. Después ingresarás con tu DNI y PIN.'
+          : 'Ingresa con tu DNI y PIN para comenzar la jornada.'
     empresa.textContent = d
       ? `${d.empresa} · ${d.nombre}`
       : token
-        ? 'QR recibido. Inicia sesión para confirmar la vinculación.'
+        ? 'QR de vinculación recibido.'
         : ''
-    formQr.classList.toggle('oculto', Boolean(d) || Boolean(token))
-    formCuenta.classList.toggle('oculto', conectado || (!d && !token))
-    buscar('pda-cambiar-qr').classList.toggle('oculto', Boolean(d) || !token)
-    continuar.classList.toggle('oculto', !conectado)
-    continuar.textContent = d ? 'Ingresar a Cosecha' : 'Vincular PDA'
-    cambiar.classList.toggle('oculto', !conectado)
+    formQr.classList.toggle('oculto', !esQr)
+    formCuenta.classList.toggle('oculto', etapa !== 'cuenta')
+    buscar('pda-datos-equipo').classList.toggle('oculto', Boolean(d))
+    buscar('pda-nombre').disabled = Boolean(d)
+    buscar('pda-form-configurar-pin').classList.toggle('oculto', etapa !== 'crear-pin')
+    buscar('pda-form-ingreso').classList.toggle('oculto', etapa !== 'ingreso')
+    buscar('pda-configurar-acceso').classList.toggle('oculto', etapa !== 'ingreso')
+    buscar('pda-volver-ingreso').classList.toggle('oculto', !d || etapa === 'ingreso')
+    buscar('pda-cambiar-qr').classList.toggle(
+      'oculto',
+      Boolean(d) || !token || etapa !== 'cuenta'
+    )
     camara.disabled = !navegador.navigator.mediaDevices?.getUserMedia
   }
   async function tarea(accion) {
@@ -84,9 +100,9 @@ export async function configurarVinculacionDispositivo({
   function recibir(valor) {
     token = tokenVinculacion(valor, navegador.location.origin, origenesQR)
     ocultarCamara()
+    etapa = 'cuenta'
     render()
-    if (!conectado) buscar('pda-email').focus()
-    else continuar.focus()
+    buscar('pda-email').focus()
   }
   function extraerFragmento() {
     if (!navegador.location.hash.startsWith('#vincular=')) return null
@@ -115,6 +131,7 @@ export async function configurarVinculacionDispositivo({
   mostrar()
   try {
     await servicio.restaurar()
+    etapa = servicio.vista() ? 'ingreso' : 'qr'
     recibirFragmento(enlaceInicial)
     render()
   } catch {
@@ -127,6 +144,12 @@ export async function configurarVinculacionDispositivo({
     recibirFragmento()
     render()
   })
+  async function ingresar(r) {
+    if (!r.operador)
+      throw new Error('Esta cuenta no tiene campañas activas de supervisor asignadas.')
+    ocultarCamara()
+    await alIngresar(r.operador)
+  }
   formCuenta.addEventListener('submit', (event) => {
     event.preventDefault()
     const credenciales = {
@@ -135,37 +158,61 @@ export async function configurarVinculacionDispositivo({
     }
     buscar('pda-password').value = ''
     tarea(async () => {
+      if (!servicio.vista() && !token)
+        throw new Error('Primero escanea el QR de la empresa.')
       await servicio.iniciarSesion(credenciales)
-      conectado = true
-      render()
-      continuar.focus()
-    })
-  })
-  continuar.addEventListener('click', () =>
-    tarea(async () => {
       if (!servicio.vista()) {
-        if (!token) throw new Error('Primero escanea el QR de la empresa.')
         await servicio.vincular(token, nombre.value)
         token = null
-        mensaje.textContent = 'PDA vinculado correctamente.'
       }
-      const r = await servicio.continuar()
-      if (!r.operador)
-        throw new Error(
-          'El PDA está vinculado. Esta cuenta todavía no tiene campañas activas de supervisor asignadas.'
-        )
-      ocultarCamara()
-      await alIngresar(r.operador)
-    })
-  )
-  cambiar.addEventListener('click', () =>
-    tarea(async () => {
-      await servicio.salir()
-      conectado = false
+      etapa = 'crear-pin'
       render()
-      buscar('pda-email').focus()
+      buscar('pda-pin-nuevo').focus()
     })
-  )
+  })
+  buscar('pda-form-configurar-pin').addEventListener('submit', (event) => {
+    event.preventDefault()
+    const pin = buscar('pda-pin-nuevo').value,
+      confirmacion = buscar('pda-pin-confirmacion').value
+    buscar('pda-pin-nuevo').value = ''
+    buscar('pda-pin-confirmacion').value = ''
+    tarea(async () => {
+      if (!/^[0-9]{4}$/.test(pin)) throw new Error('El PIN debe contener 4 dígitos.')
+      if (pin !== confirmacion)
+        throw new Error('Los PIN no coinciden. Vuelve a ingresarlos.')
+      const { dni } = await servicio.configurarPin(pin)
+      buscar('pda-dni').value = dni
+      etapa = 'ingreso'
+      render()
+      await ingresar(await servicio.iniciarConPin({ dni, pin }))
+    })
+  })
+  buscar('pda-form-ingreso').addEventListener('submit', (event) => {
+    event.preventDefault()
+    const dni = buscar('pda-dni').value.trim(),
+      pin = buscar('pda-pin').value
+    buscar('pda-pin').value = ''
+    tarea(async () => {
+      await ingresar(await servicio.iniciarConPin({ dni, pin }))
+    })
+  })
+  buscar('pda-configurar-acceso').addEventListener('click', () => {
+    if (ocupado || !servicio.vista()) return
+    etapa = 'cuenta'
+    mensaje.textContent = ''
+    render()
+    buscar('pda-email').focus()
+  })
+  buscar('pda-volver-ingreso').addEventListener('click', () => {
+    if (ocupado) return
+    etapa = 'ingreso'
+    mensaje.textContent = ''
+    buscar('pda-password').value = ''
+    buscar('pda-pin-nuevo').value = ''
+    buscar('pda-pin-confirmacion').value = ''
+    render()
+    buscar('pda-dni').focus()
+  })
   buscar('pda-cambiar-qr').addEventListener('click', () => {
     if (ocupado) return
     token = null
@@ -235,23 +282,18 @@ export async function configurarVinculacionDispositivo({
     if (doc.hidden) ocultarCamara()
   })
   return Object.freeze({
+    enConfiguracion: () => ['cuenta', 'crear-pin'].includes(etapa),
     bloquear(error) {
       ocultarCamara()
-      conectado = false
+      etapa = servicio.vista() ? 'ingreso' : 'qr'
       mostrar()
       mensaje.textContent = error.message
       render()
     },
     async restaurar() {
-      if (!servicio.vista()) return
+      if (!servicio.haySesionPin()) return
       await tarea(async () => {
-        const r = await servicio.continuar()
-        conectado = true
-        if (r.operador) await alIngresar(r.operador)
-        else
-          throw new Error(
-            'Esta cuenta no tiene campañas activas asignadas en la empresa vinculada.'
-          )
+        await ingresar(await servicio.continuar())
       })
     }
   })

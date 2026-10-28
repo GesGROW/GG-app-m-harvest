@@ -18,6 +18,8 @@ function escenario() {
   let dato,
     sujeto = null,
     vinculado = false,
+    actorPin = null,
+    secuenciaPin = 0,
     online = true,
     reloj = Date.parse('2026-10-27T18:00:00Z'),
     respuesta,
@@ -35,11 +37,11 @@ function escenario() {
       dato = structuredClone(d)
     }
   }
-  const contexto = () => ({
+  const contexto = (actor = actorPin ?? sujeto) => ({
     dispositivo: { id: 'D', tenantId: 'A', estado: 'ACTIVO', nombre: 'PDA Norte' },
-    contexto: { tenantId: 'A', usuarioId: sujeto, empresa: 'Empresa A' },
+    contexto: { tenantId: 'A', usuarioId: actor, empresa: 'Empresa A' },
     operador: {
-      dni: sujeto === 'U2' ? '87654321' : '12345678',
+      dni: actor === 'U2' ? '87654321' : '12345678',
       tenant_id: 'A',
       campanias: [{ id: 'C', tenant_id: 'A' }],
       autorizado_para_fecha: '2026-10-27'
@@ -58,6 +60,26 @@ function escenario() {
       llamadas.push(['vincular', d.id, t, n])
       vinculado = true
       return contexto()
+    },
+    configurarPin: async () => ({ dni: '12345678' }),
+    iniciarConPin: async (d, { dni, pin }) => {
+      llamadas.push(['loginPin', d.id, dni])
+      if (pin !== '0427') return { ok: false, mensaje: 'DNI o PIN incorrectos' }
+      actorPin = dni === '87654321' ? 'U2' : 'U'
+      secuenciaPin++
+      return {
+        ok: true,
+        sesion: String(secuenciaPin).padStart(64, 'd'),
+        datos: contexto()
+      }
+    },
+    salirPin: async () => {
+      actorPin = null
+    },
+    validarPin: async (d) => {
+      llamadas.push(['validarPin', d.id])
+      if (fallo) throw fallo
+      return respuesta ?? contexto()
     },
     validar: async (d) => {
       llamadas.push(['validar', d.id])
@@ -111,6 +133,8 @@ async function preparar() {
   await s.restaurar()
   await s.iniciarSesion({ email: 'u@test', password: 'secreto' })
   await s.vincular(token, 'PDA Norte')
+  await s.configurarPin('0427')
+  await s.iniciarConPin({ dni: '12345678', pin: '0427' })
   await s.continuar()
   return { e, s }
 }
@@ -135,14 +159,15 @@ test('vincula una sola vez, persiste antes del envío y conserva el equipo al sa
   const { e, s } = await preparar()
   assert.equal(s.vista().empresa, 'Empresa A')
   assert.equal(JSON.stringify(e.dato()).includes(token), false)
+  assert.equal(JSON.stringify(e.dato()).includes('0427'), false)
   await assert.rejects(s.vincular(token, 'Otro'), /ya está vinculado/)
   await s.salir()
   assert.equal(e.dato().estado, 'VINCULADO')
   assert.equal(e.dato().autorizacion, null)
   const recargado = e.nuevo()
   await recargado.restaurar()
-  await assert.rejects(recargado.continuar(), /Inicia sesión/)
-  await recargado.iniciarSesion({})
+  await assert.rejects(recargado.continuar(), /DNI y PIN/)
+  await recargado.iniciarConPin({ dni: '12345678', pin: '0427' })
   await recargado.continuar()
   assert.equal(e.llamadas.filter((c) => c[0] === 'vincular').length, 1)
 })
@@ -160,7 +185,7 @@ test('reutiliza UUID y credencial si se perdió la respuesta; recupera la vincul
   const recargado = e.nuevo()
   await recargado.restaurar()
   assert.equal(recargado.vista().empresa, 'Empresa A')
-  await recargado.continuar()
+  await assert.rejects(recargado.continuar(), /DNI y PIN/)
   assert.equal(e.llamadas.filter((c) => c[0] === 'vincular').length, 1)
   assert.equal(e.dato().id, 'D')
 })
@@ -179,7 +204,7 @@ test('offline admite solo la cuenta validada hoy y rechaza el vencimiento; no ha
   await assert.rejects(s.validar({ forzar: true }), /no autorizado/)
   assert.equal(e2.dato().autorizacion, null)
   e2.offline()
-  await assert.rejects(s.continuar(), /Conéctate/)
+  await assert.rejects(s.continuar(), /DNI y PIN/)
 })
 test('empresa, campaña o actor ajenos no pueden adoptar la sesión ni enviar operaciones', async () => {
   const { e, s } = await preparar()
@@ -232,6 +257,14 @@ test('adapter usa solo el contrato autorizado y cerrar sesión afecta únicament
   const d = { id: 'D', credencial: 'secreto', actor: 'inyectado', tenantId: 'B' }
   await adapter.vincular(d, token, 'PDA')
   await adapter.validar(d)
+  await adapter.configurarPin(d, '0427')
+  await adapter.iniciarConPin(d, {
+    dni: '12345678',
+    pin: '0427',
+    usuarioId: 'inyectado'
+  })
+  await adapter.validarPin(d, 'sesion-pin')
+  await adapter.salirPin(d, 'sesion-pin')
   await adapter.salir()
   assert.deepEqual(calls, [
     [
@@ -244,6 +277,27 @@ test('adapter usa solo el contrato autorizado y cerrar sesión afecta únicament
       }
     ],
     ['pda_preparar_ingreso', { p_dispositivo_id: 'D', p_credencial: 'secreto' }],
+    [
+      'pda_configurar_pin',
+      { p_dispositivo_id: 'D', p_credencial: 'secreto', p_pin: '0427' }
+    ],
+    [
+      'pda_iniciar_sesion_pin',
+      {
+        p_dispositivo_id: 'D',
+        p_credencial: 'secreto',
+        p_dni: '12345678',
+        p_pin: '0427'
+      }
+    ],
+    [
+      'pda_preparar_ingreso_pin',
+      { p_dispositivo_id: 'D', p_credencial: 'secreto', p_sesion: 'sesion-pin' }
+    ],
+    [
+      'pda_cerrar_sesion_pin',
+      { p_dispositivo_id: 'D', p_credencial: 'secreto', p_sesion: 'sesion-pin' }
+    ],
     ['salir', { scope: 'local' }]
   ])
 })
@@ -290,11 +344,10 @@ test('la protección de casos y sincronización evita envío con otro DNI o camp
 
 test('descarta la validación si cambia la cuenta mientras responde el servidor', async () => {
   const { e, s } = await preparar()
-  e.remoto.validar = async () => {
-    const r = e.contexto()
-    e.sujeto('U2')
-    return r
-  }
+  e.respuesta({
+    ...e.contexto(),
+    contexto: { tenantId: 'A', usuarioId: 'U2', empresa: 'Empresa A' }
+  })
   await assert.rejects(s.validar({ forzar: true }), /cuenta cambió/)
   assert.equal(e.dato().autorizacion.sujeto, 'U')
 })
@@ -302,12 +355,29 @@ test('descarta la validación si cambia la cuenta mientras responde el servidor'
 test('otro supervisor inicia sesión sin regenerar credenciales ni volver a escanear el QR', async () => {
   const { e, s } = await preparar()
   await s.salir()
-  e.remoto.iniciarSesion = async () => {
-    e.sujeto('U2')
-  }
-  await s.iniciarSesion({})
+  await s.iniciarConPin({ dni: '87654321', pin: '0427' })
   await s.continuar()
   assert.equal((await s.operador()).dni, '87654321')
   assert.equal(e.dato().id, 'D')
   assert.equal(e.llamadas.filter((c) => c[0] === 'vincular').length, 1)
+})
+
+test('la cuenta de configuración no reemplaza al PIN y se rechazan códigos erróneos sin abrir la jornada', async () => {
+  const e = escenario(),
+    s = e.nuevo()
+  await s.restaurar()
+  await assert.rejects(
+    s.iniciarConPin({ dni: '12345678', pin: '0427' }),
+    /Primero vincula/
+  )
+  await s.iniciarSesion({})
+  await s.vincular(token, 'PDA')
+  await assert.rejects(s.continuar(), /DNI y PIN/)
+  await assert.rejects(s.configurarPin('abc'), /4 dígitos/)
+  await s.configurarPin('0427')
+  await assert.rejects(s.iniciarConPin({ dni: '12345678', pin: '9999' }), /incorrectos/)
+  assert.equal(s.haySesionPin(), false)
+  assert.equal(e.dato().autorizacion, null)
+  await s.iniciarConPin({ dni: '12345678', pin: '0427' })
+  assert.equal((await s.operador()).dni, '12345678')
 })

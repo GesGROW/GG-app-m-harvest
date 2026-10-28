@@ -1,6 +1,9 @@
 import './style.css'
 import './tables.css'
-import { cerrarSesionDispositivo } from './modules/sesionDispositivo.js'
+import {
+  cerrarSesionDispositivo,
+  mostrarIngresoDispositivo
+} from './modules/sesionDispositivo.js'
 import { enhanceNativeSelects } from '@gesgrow/core/presentation/select.js'
 import { backend } from '@gesgrow/core/backend/backend.js'
 import { casosDeUso } from './application/casosDeUso.js'
@@ -2056,6 +2059,7 @@ function mostrarVista(vista) {
   vistaRankingCosechadores.classList.add('oculto')
   vistaProduccionDiaria.classList.add('oculto')
   vistaProduccionLotes.classList.add('oculto')
+  if (vista === vistaLogin && mostrarIngresoDispositivo()) return
   vista.classList.remove('oculto')
 }
 

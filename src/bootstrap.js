@@ -16,7 +16,10 @@ import { crearDispositivoIndexedDB } from './infrastructure/indexeddb/dispositiv
 import { crearDispositivoSupabase } from './infrastructure/supabase/dispositivoAdapter.js'
 import { comprobarTrabajoDispositivo } from './offline/db.js'
 import { configurarVinculacionDispositivo } from './modules/vinculacionDispositivo.js'
-import { configurarSalidaDispositivo } from './modules/sesionDispositivo.js'
+import {
+  configurarSalidaDispositivo,
+  configurarIngresoDispositivo
+} from './modules/sesionDispositivo.js'
 import './style.css'
 import './vinculacion.css'
 import {
@@ -77,9 +80,13 @@ pantallaPda = await configurarVinculacionDispositivo({
     })
   }
 })
+configurarIngresoDispositivo(() =>
+  pantallaPda?.bloquear(new Error('Ingresa tu DNI y PIN para comenzar la jornada.'))
+)
 await pantallaPda?.restaurar()
 const revisar = () => {
-  if (cargado) dispositivo.validar({ forzar: true }).catch(() => {})
+  if (cargado && !pantallaPda?.enConfiguracion())
+    dispositivo.validar({ forzar: true }).catch(() => {})
 }
 window.addEventListener('online', revisar)
 window.addEventListener('focus', revisar)
