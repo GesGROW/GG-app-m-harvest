@@ -40,7 +40,7 @@ const administracionComercial = crearAdministracionComercial({
 let pantallaPda,
   cargado = false
 const dispositivo = crearVinculacionDispositivo({
-  remoto: crearDispositivoSupabase(supabase),
+  remoto: crearDispositivoSupabase(supabase, supabaseOperativo),
   almacen: crearDispositivoIndexedDB(),
   enLinea: () => navigator.onLine,
   comprobarDatos: comprobarTrabajoDispositivo,
@@ -81,7 +81,7 @@ pantallaPda = await configurarVinculacionDispositivo({
   }
 })
 configurarIngresoDispositivo(() =>
-  pantallaPda?.bloquear(new Error('Ingresa tu DNI y PIN para comenzar la jornada.'))
+  pantallaPda?.bloquear(new Error('Ingresa tu DNI para comenzar la jornada.'))
 )
 await pantallaPda?.restaurar()
 const revisar = () => {

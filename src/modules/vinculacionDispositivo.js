@@ -43,18 +43,14 @@ export async function configurarVinculacionDispositivo({
     if (esQr) etapa = 'qr'
     titulo.textContent = esQr
       ? 'Vincular este PDA'
-      : etapa === 'crear-pin'
-        ? 'Crea tu PIN'
-        : etapa === 'cuenta'
-          ? 'Configurar acceso'
-          : 'Sistema de Control de Cosecha'
+      : etapa === 'cuenta'
+        ? 'Completar vinculación'
+        : 'Sistema de Control de Cosecha'
     detalle.textContent = esQr
       ? 'Escanea el QR de la empresa con la cámara.'
       : etapa === 'cuenta'
-        ? 'Valida tu cuenta una sola vez para crear o recuperar tu PIN.'
-        : etapa === 'crear-pin'
-          ? 'Crea un PIN de 4 dígitos. Después ingresarás con tu DNI y PIN.'
-          : 'Ingresa con tu DNI y PIN para comenzar la jornada.'
+        ? 'Valida tu cuenta una sola vez para vincular este PDA.'
+        : 'Ingresa con tu DNI para comenzar la jornada.'
     empresa.textContent = d
       ? `${d.empresa} · ${d.nombre}`
       : token
@@ -64,10 +60,7 @@ export async function configurarVinculacionDispositivo({
     formCuenta.classList.toggle('oculto', etapa !== 'cuenta')
     buscar('pda-datos-equipo').classList.toggle('oculto', Boolean(d))
     buscar('pda-nombre').disabled = Boolean(d)
-    buscar('pda-form-configurar-pin').classList.toggle('oculto', etapa !== 'crear-pin')
     buscar('pda-form-ingreso').classList.toggle('oculto', etapa !== 'ingreso')
-    buscar('pda-configurar-acceso').classList.toggle('oculto', etapa !== 'ingreso')
-    buscar('pda-volver-ingreso').classList.toggle('oculto', !d || etapa === 'ingreso')
     buscar('pda-cambiar-qr').classList.toggle(
       'oculto',
       Boolean(d) || !token || etapa !== 'cuenta'
@@ -165,53 +158,17 @@ export async function configurarVinculacionDispositivo({
         await servicio.vincular(token, nombre.value)
         token = null
       }
-      etapa = 'crear-pin'
-      render()
-      buscar('pda-pin-nuevo').focus()
-    })
-  })
-  buscar('pda-form-configurar-pin').addEventListener('submit', (event) => {
-    event.preventDefault()
-    const pin = buscar('pda-pin-nuevo').value,
-      confirmacion = buscar('pda-pin-confirmacion').value
-    buscar('pda-pin-nuevo').value = ''
-    buscar('pda-pin-confirmacion').value = ''
-    tarea(async () => {
-      if (!/^[0-9]{4}$/.test(pin)) throw new Error('El PIN debe contener 4 dígitos.')
-      if (pin !== confirmacion)
-        throw new Error('Los PIN no coinciden. Vuelve a ingresarlos.')
-      const { dni } = await servicio.configurarPin(pin)
-      buscar('pda-dni').value = dni
       etapa = 'ingreso'
       render()
-      await ingresar(await servicio.iniciarConPin({ dni, pin }))
+      buscar('pda-dni').focus()
     })
   })
   buscar('pda-form-ingreso').addEventListener('submit', (event) => {
     event.preventDefault()
-    const dni = buscar('pda-dni').value.trim(),
-      pin = buscar('pda-pin').value
-    buscar('pda-pin').value = ''
+    const dni = buscar('pda-dni').value.trim()
     tarea(async () => {
-      await ingresar(await servicio.iniciarConPin({ dni, pin }))
+      await ingresar(await servicio.iniciarConDni(dni))
     })
-  })
-  buscar('pda-configurar-acceso').addEventListener('click', () => {
-    if (ocupado || !servicio.vista()) return
-    etapa = 'cuenta'
-    mensaje.textContent = ''
-    render()
-    buscar('pda-email').focus()
-  })
-  buscar('pda-volver-ingreso').addEventListener('click', () => {
-    if (ocupado) return
-    etapa = 'ingreso'
-    mensaje.textContent = ''
-    buscar('pda-password').value = ''
-    buscar('pda-pin-nuevo').value = ''
-    buscar('pda-pin-confirmacion').value = ''
-    render()
-    buscar('pda-dni').focus()
   })
   buscar('pda-cambiar-qr').addEventListener('click', () => {
     if (ocupado) return
@@ -282,7 +239,7 @@ export async function configurarVinculacionDispositivo({
     if (doc.hidden) ocultarCamara()
   })
   return Object.freeze({
-    enConfiguracion: () => ['cuenta', 'crear-pin'].includes(etapa),
+    enConfiguracion: () => etapa === 'cuenta',
     bloquear(error) {
       ocultarCamara()
       etapa = servicio.vista() ? 'ingreso' : 'qr'
@@ -291,7 +248,7 @@ export async function configurarVinculacionDispositivo({
       render()
     },
     async restaurar() {
-      if (!servicio.haySesionPin()) return
+      if (!servicio.haySesionDni()) return
       await tarea(async () => {
         await ingresar(await servicio.continuar())
       })

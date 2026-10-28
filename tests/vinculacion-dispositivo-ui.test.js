@@ -59,16 +59,12 @@ function preparar({ vinculado = false, fragmento = '', fallar = false } = {}) {
       llamadas.push(['login', datos])
       if (fallar) throw new Error('Credenciales inválidas')
     },
-    configurarPin: async (pin) => {
-      llamadas.push(['configurarPin', pin])
-      return { dni: '12345678' }
+    iniciarConDni: async (dni) => {
+      llamadas.push(['loginDni', dni])
+      if (fallar) throw new Error('DNI no autorizado')
+      return { operador: { dni } }
     },
-    iniciarConPin: async (datos) => {
-      llamadas.push(['loginPin', datos.dni])
-      if (fallar) throw new Error('DNI o PIN incorrectos')
-      return { operador: { dni: datos.dni } }
-    },
-    haySesionPin: () => false,
+    haySesionDni: () => false,
     vincular: async (t, n) => {
       llamadas.push(['vincular', t, n])
       vinculado = true
@@ -87,55 +83,51 @@ function preparar({ vinculado = false, fragmento = '', fallar = false } = {}) {
     })
   return { nodes, llamadas, rutas, iniciar, servicio, navegador }
 }
-test('primero escanea, luego valida la cuenta y crea el PIN antes de ingresar; nunca entra solo con correo', async () => {
+test('primero escanea y vincula, luego muestra solo DNI sin solicitar PIN', async () => {
   const token = 'a'.repeat(64),
     e = preparar({ fragmento: '#vincular=' + token })
   await e.iniciar()
   assert.deepEqual(e.rutas, ['/'])
   assert.equal(e.nodes['#pda-form-qr'].classList.contains('oculto'), true)
   assert.equal(e.nodes['#pda-form-cuenta'].classList.contains('oculto'), false)
-  assert.doesNotMatch(html, /id="pda-enlace"|Leer enlace|pega el enlace/)
+  assert.doesNotMatch(html, /id="pda-enlace"|Leer enlace|pega el enlace|id="pda-pin/)
   e.nodes['#pda-email'].value = 'supervisor@example.test'
   e.nodes['#pda-password'].value = 'password-test'
   e.nodes['#pda-nombre'].value = 'PDA Norte'
   e.nodes['#pda-form-cuenta'].emitir('submit')
   await turno()
   assert.equal(e.nodes['#pda-password'].value, '')
-  assert.equal(e.nodes['#pda-form-configurar-pin'].classList.contains('oculto'), false)
+  assert.equal(e.nodes['#pda-form-cuenta'].classList.contains('oculto'), true)
+  assert.equal(e.nodes['#pda-form-ingreso'].classList.contains('oculto'), false)
   assert.equal(
     e.llamadas.some((l) => l[0] === 'ingresar'),
     false
   )
-  e.nodes['#pda-pin-nuevo'].value = '0427'
-  e.nodes['#pda-pin-confirmacion'].value = '0427'
-  e.nodes['#pda-form-configurar-pin'].emitir('submit')
+  e.nodes['#pda-dni'].value = '12345678'
+  e.nodes['#pda-form-ingreso'].emitir('submit')
   await turno()
   assert.deepEqual(
     e.llamadas.map((l) => l[0]),
-    ['login', 'vincular', 'configurarPin', 'loginPin', 'ingresar']
+    ['login', 'vincular', 'loginDni', 'ingresar']
   )
-  assert.equal(e.nodes['#pda-titulo'].textContent, 'Sistema de Control de Cosecha')
-  assert.equal(e.nodes['#pda-pin-nuevo'].value, '')
-  assert.equal(e.nodes['#pda-pin-confirmacion'].value, '')
 })
-test('un equipo conocido omite QR y una cuenta incorrecta nunca habilita el ingreso', async () => {
+
+test('un equipo conocido omite QR y correo y rechaza un DNI no autorizado', async () => {
   const e = preparar({ vinculado: true, fallar: true })
   await e.iniciar()
   assert.equal(e.nodes['#pda-form-qr'].classList.contains('oculto'), true)
-  assert.equal(e.nodes['#pda-empresa'].textContent, 'Empresa A · PDA Norte')
   assert.equal(e.nodes['#pda-form-cuenta'].classList.contains('oculto'), true)
   assert.equal(e.nodes['#pda-form-ingreso'].classList.contains('oculto'), false)
   e.nodes['#pda-dni'].value = '12345678'
-  e.nodes['#pda-pin'].value = '9999'
   e.nodes['#pda-form-ingreso'].emitir('submit')
   await turno()
-  assert.match(e.nodes['#pda-mensaje'].textContent, /DNI o PIN incorrectos/)
-  assert.equal(e.nodes['#pda-pin'].value, '')
+  assert.match(e.nodes['#pda-mensaje'].textContent, /DNI no autorizado/)
   assert.equal(
     e.llamadas.some((l) => l[0] === 'vincular' || l[0] === 'ingresar'),
     false
   )
 })
+
 test('la cámara lee el QR, cierra el stream y permite escanear otro código', async () => {
   const e = preparar()
   let cerrada = false
@@ -195,59 +187,26 @@ test('si falla la reproducción de cámara cierra el stream y solicita revisar l
   assert.equal(e.nodes['#pda-video'].srcObject, null)
 })
 
-test('primera apertura muestra exclusivamente QR y no permite ingreso ni configuración sin escanear', async () => {
+test('primera apertura muestra exclusivamente QR y no permite ingreso sin vincular', async () => {
   const e = preparar()
   await e.iniciar()
   assert.equal(e.nodes['#pda-form-qr'].classList.contains('oculto'), false)
-  for (const id of [
-    'pda-form-cuenta',
-    'pda-form-configurar-pin',
-    'pda-form-ingreso',
-    'pda-configurar-acceso'
-  ])
-    assert.equal(e.nodes['#' + id].classList.contains('oculto'), true, id)
-  e.nodes['#pda-configurar-acceso'].emitir('click')
   assert.equal(e.nodes['#pda-form-cuenta'].classList.contains('oculto'), true)
+  assert.equal(e.nodes['#pda-form-ingreso'].classList.contains('oculto'), true)
   e.nodes['#pda-form-cuenta'].emitir('submit')
   await turno()
   assert.match(e.nodes['#pda-mensaje'].textContent, /Primero escanea/)
   assert.equal(e.llamadas.length, 0)
 })
 
-test('ingreso diario con DNI y PIN no consulta correo y recupera PIN solo al pedirlo', async () => {
+test('ingreso diario solicita solamente DNI y no llama a Auth ni vuelve a vincular', async () => {
   const e = preparar({ vinculado: true })
   await e.iniciar()
   e.nodes['#pda-dni'].value = '12345678'
-  e.nodes['#pda-pin'].value = '0427'
   e.nodes['#pda-form-ingreso'].emitir('submit')
   await turno()
-  assert.deepEqual(
-    e.llamadas.map((l) => l[0]),
-    ['loginPin', 'ingresar']
-  )
-  assert.equal(e.nodes['#pda-pin'].value, '')
-  e.nodes['#pda-configurar-acceso'].emitir('click')
-  assert.equal(e.nodes['#pda-form-cuenta'].classList.contains('oculto'), false)
-  assert.equal(e.nodes['#pda-form-qr'].classList.contains('oculto'), true)
-  e.nodes['#pda-volver-ingreso'].emitir('click')
-  assert.equal(e.nodes['#pda-form-cuenta'].classList.contains('oculto'), true)
-  assert.equal(e.nodes['#pda-form-ingreso'].classList.contains('oculto'), false)
-})
-
-test('PIN nuevo requiere confirmación coincidente y se limpia aun si hay error', async () => {
-  const e = preparar({ vinculado: true })
-  await e.iniciar()
-  e.nodes['#pda-configurar-acceso'].emitir('click')
-  e.nodes['#pda-form-cuenta'].emitir('submit')
-  await turno()
-  e.nodes['#pda-pin-nuevo'].value = '0427'
-  e.nodes['#pda-pin-confirmacion'].value = '1234'
-  e.nodes['#pda-form-configurar-pin'].emitir('submit')
-  await turno()
-  assert.match(e.nodes['#pda-mensaje'].textContent, /no coinciden/)
-  assert.equal(e.nodes['#pda-pin-nuevo'].value, '')
-  assert.equal(
-    e.llamadas.some((l) => l[0] === 'configurarPin' || l[0] === 'ingresar'),
-    false
-  )
+  assert.deepEqual(e.llamadas, [
+    ['loginDni', '12345678'],
+    ['ingresar', '12345678']
+  ])
 })

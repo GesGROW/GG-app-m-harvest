@@ -152,31 +152,6 @@
             />
             <button type="submit" class="btn-primary">Validar cuenta</button>
           </form>
-          <form id="pda-form-configurar-pin" class="form-stack oculto">
-            <label for="pda-pin-nuevo">PIN de 4 dígitos</label>
-            <input
-              id="pda-pin-nuevo"
-              type="password"
-              inputmode="numeric"
-              pattern="[0-9]{4}"
-              minlength="4"
-              maxlength="4"
-              autocomplete="new-password"
-              required
-            />
-            <label for="pda-pin-confirmacion">Confirmar PIN</label>
-            <input
-              id="pda-pin-confirmacion"
-              type="password"
-              inputmode="numeric"
-              pattern="[0-9]{4}"
-              minlength="4"
-              maxlength="4"
-              autocomplete="new-password"
-              required
-            />
-            <button type="submit" class="btn-primary">Guardar PIN e ingresar</button>
-          </form>
           <form id="pda-form-ingreso" class="form-stack oculto">
             <label for="pda-dni">DNI del supervisor</label>
             <input
@@ -189,27 +164,9 @@
               placeholder="Ingresa tu DNI"
               required
             />
-            <label for="pda-pin">PIN de 4 dígitos</label>
-            <input
-              id="pda-pin"
-              type="password"
-              inputmode="numeric"
-              pattern="[0-9]{4}"
-              minlength="4"
-              maxlength="4"
-              autocomplete="current-password"
-              placeholder="Ingresa tu PIN"
-              required
-            />
             <button type="submit" class="btn-primary">Ingresar</button>
           </form>
           <p id="pda-mensaje" class="mensaje" role="status" aria-live="polite"></p>
-          <button id="pda-configurar-acceso" type="button" class="btn-secondary oculto">
-            Configurar o recuperar mi PIN
-          </button>
-          <button id="pda-volver-ingreso" type="button" class="btn-secondary oculto">
-            Volver al ingreso con DNI y PIN
-          </button>
         </div>
       </section>
       <section id="vista-login" class="pantalla pantalla-login oculto">

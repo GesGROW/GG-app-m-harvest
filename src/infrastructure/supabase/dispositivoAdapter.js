@@ -1,8 +1,8 @@
-export function crearDispositivoSupabase(cliente) {
-  async function rpc(nombre, datos) {
+export function crearDispositivoSupabase(cliente, operativo = cliente) {
+  async function rpc(nombre, datos, conexion = cliente) {
     let respuesta
     try {
-      respuesta = await cliente.rpc(nombre, datos)
+      respuesta = await conexion.rpc(nombre, datos)
     } catch {
       throw new Error(
         'No se pudo conectar. Comprueba la conexión e inténtalo de nuevo.'
@@ -46,13 +46,7 @@ export function crearDispositivoSupabase(cliente) {
         p_nombre: nombre
       }),
     validar: (d) => rpc('pda_preparar_ingreso', parametros(d)),
-    configurarPin: (d, pin) =>
-      rpc('pda_configurar_pin', { ...parametros(d), p_pin: pin }),
-    iniciarConPin: (d, { dni, pin }) =>
-      rpc('pda_iniciar_sesion_pin', { ...parametros(d), p_dni: dni, p_pin: pin }),
-    validarPin: (d, sesion) =>
-      rpc('pda_preparar_ingreso_pin', { ...parametros(d), p_sesion: sesion }),
-    salirPin: (d, sesion) =>
-      rpc('pda_cerrar_sesion_pin', { ...parametros(d), p_sesion: sesion })
+    ingresarConDni: (d, dni) =>
+      rpc('pda_preparar_ingreso_dni', { ...parametros(d), p_dni: dni }, operativo)
   })
 }
