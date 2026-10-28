@@ -125,6 +125,78 @@ test('antes del corte Application usa legacy explícito y conserva escaneos repe
   )
 })
 
+test('PDA exige asignación por lote y no genera pendientes por ticket con caché antigua', async () => {
+  await cache(null)
+  const pda = crearCasosDeUso({
+    offline: crearAdaptadoresOffline(),
+    backend: {},
+    asignacionPorLoteObligatoria: true,
+    generarId: () => crypto.randomUUID(),
+    ahora: () => new Date().toISOString(),
+    estaEnLinea: () => false,
+    registrarError() {}
+  })
+  await assert.rejects(
+    pda.asignarTicket({ operador, cosechador: { dni: DNI }, codigoTicket: 'T1' }),
+    /Actualiza los datos/
+  )
+  assert.deepEqual(await filas('cola'), [])
+  await cache(politica)
+  const r = await pda.asignarTicket({
+    operador,
+    cosechador: { dni: DNI },
+    codigoTicket: 'T1'
+  })
+  assert.equal(r.operacion.modelo, 'HARVEST')
+  await assert.rejects(
+    pda.asignarTicket({ operador, cosechador: { dni: J }, codigoTicket: 'T2' }),
+    /asignado/
+  )
+})
+
+test('consulta de asignados muestra todos los tickets del lote y omite la asignación legacy reparada', async () => {
+  await cache(politica)
+  await local.guardarTicketLocal({
+    codigoTicket: 'T2',
+    cosechadorDni: J,
+    cosechador: 'Anterior',
+    operacionId: 'OLD'
+  })
+  const r = await asignar()
+  const pendientes = await local.obtenerAsignacionesTickets()
+  assert.deepEqual(pendientes.map((t) => t.codigo_ticket).sort(), ['T1', 'T2'])
+  assert.ok(
+    pendientes.every(
+      (t) =>
+        t.cosechador_dni === DNI &&
+        t.cosechador === 'Ana' &&
+        t.estado_sync === 'PENDIENTE'
+    )
+  )
+  assert.ok(pendientes.every((t) => t.fecha_asignacion === r.operacion.creado_en))
+  await local.guardarSnapshotHarvest(
+    snapshotHarvest({
+      cutover: politica,
+      asignacion: {
+        trabajadorId: 'W',
+        operacionId: r.operacion.id,
+        fechaAsignacion: '2026-10-28T18:37:03Z'
+      }
+    })
+  )
+  const confirmadas = await local.obtenerAsignacionesTickets()
+  assert.equal(confirmadas.length, 2)
+  assert.ok(
+    confirmadas.every(
+      (t) =>
+        t.estado_sync === 'SINCRONIZADO' &&
+        t.fecha_asignacion === '2026-10-28T18:37:03Z' &&
+        t.cosechador_dni === DNI
+    )
+  )
+  assert.deepEqual(await local.obtenerAsignacionesTickets('D'), [])
+})
+
 test('después del corte Application crea registros y reservas Harvest; aliases legacy no pueden escribir', async () => {
   await cache(politica)
   const a = await asignar(),

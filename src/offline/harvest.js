@@ -472,6 +472,64 @@ export function crearHarvestLocal({ dbPromise, crearOperacionEnTx }) {
     await tx.done
     return valor
   }
+  async function listarAsignaciones(campaniaId = obtenerContextoCampania()) {
+    const db = conCampania(await dbPromise, campaniaId)
+    const tx = db.transaction(storesTransaccion, 'readonly')
+    const [
+      meta,
+      campania,
+      tickets,
+      asignaciones,
+      intenciones,
+      operaciones,
+      trabajadores,
+      legacy
+    ] = await Promise.all([
+      tx.objectStore('meta').get(`harvest:${campaniaId}`),
+      tx.objectStore('meta').get(`campania:${campaniaId}`),
+      tx.objectStore('harvestTickets').index('campania').getAll(campaniaId),
+      tx.objectStore('harvestAsignaciones').index('campania').getAll(campaniaId),
+      tx.objectStore('harvestReservas').index('campania').getAll(campaniaId),
+      tx.objectStore('cola').getAll(),
+      tx.objectStore('trabajadores').getAll(),
+      tx.objectStore('tickets').getAll()
+    ])
+    await tx.done
+    if (!meta?.cutover) return legacy
+    const porOperacion = new Map(operaciones.map((o) => [o.id, o]))
+    const porLote = new Map(asignaciones.map((a) => [a.loteId, a]))
+    for (const r of intenciones) {
+      if (r.tipo !== 'ASIGNACION' || porLote.has(r.recurso)) continue
+      if (
+        r.estado === 'ACTIVA' &&
+        porOperacion.get(r.operacionId)?.estado === 'PENDIENTE'
+      )
+        porLote.set(r.recurso, { ...r, loteId: r.recurso, pendiente: true })
+    }
+    const identidades = new Map(
+      (meta.identidadesTrabajadores ?? []).map((w) => [w.id, w])
+    )
+    const porId = new Map(trabajadores.filter((w) => w.id).map((w) => [w.id, w]))
+    const porDni = new Map(trabajadores.map((w) => [w.dni, w]))
+    return tickets.flatMap((t) => {
+      const a = porLote.get(t.loteId)
+      if (!a) return []
+      exigirMismoTenant(campania, t, a)
+      const dni = identidades.get(a.trabajadorId)?.dni ?? a.trabajadorDni
+      const w = porId.get(a.trabajadorId) ?? porDni.get(dni)
+      return [
+        {
+          codigo_ticket: t.codigo,
+          lote_tickets_id: t.loteId,
+          cosechador_dni: w?.dni ?? dni,
+          cosechador: w?.nombre ?? a.nombre ?? dni,
+          fecha_asignacion:
+            a.fechaAsignacion ?? porOperacion.get(a.operacionId)?.creado_en,
+          estado_sync: a.pendiente ? 'PENDIENTE' : 'SINCRONIZADO'
+        }
+      ]
+    })
+  }
   async function reservarAsignacion(args) {
     const campaniaId = args.campaniaId ?? obtenerContextoCampania()
     return atomica(campaniaId, async (tx) => {
@@ -638,7 +696,15 @@ export function crearHarvestLocal({ dbPromise, crearOperacionEnTx }) {
             }
           ],
           asignacionesDeLote: lote.asignacion
-            ? [{ ...lote.asignacion, campaniaId: lote.campaniaId }]
+            ? [
+                {
+                  ...lote.asignacion,
+                  campaniaId: lote.campaniaId,
+                  fechaAsignacion:
+                    (await get(tx, 'harvestAsignaciones', lote.id))?.fechaAsignacion ??
+                    (op.tipo === 'ASIGNAR_TICKET' ? op.creado_en : undefined)
+                }
+              ]
             : [],
           tickets: [
             {
@@ -785,6 +851,7 @@ export function crearHarvestLocal({ dbPromise, crearOperacionEnTx }) {
       return modeloOperativoHarvest(meta?.cutover, campaniaId)
     },
     obtener,
+    listarAsignaciones,
     reservarAsignacion,
     reservarConsumo,
     confirmar,

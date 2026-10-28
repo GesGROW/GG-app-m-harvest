@@ -104,7 +104,13 @@ export function crearCasosDeUso(dependencias) {
     asignarTicket: offline.harvest
       ? segunCutover(
           crearSolicitarAsignacionHarvest(harvest),
-          crearAsignarTicket(legacyControlado)
+          dependencias.asignacionPorLoteObligatoria
+            ? async () => {
+                throw new Error(
+                  'Actualiza los datos de la campaña para asignar el lote completo.'
+                )
+              }
+            : crearAsignarTicket(legacyControlado)
         )
       : crearAsignarTicket(harvest),
     iniciarSesionLectura: crearIniciarSesionLectura(harvest),

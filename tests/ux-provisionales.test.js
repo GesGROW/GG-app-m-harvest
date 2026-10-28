@@ -189,12 +189,13 @@ for (const id of [
   })
 }
 
-test('éxito de asignación online y offline dice exactamente Ticket C71048263 asignado', async () => {
+test('asignación informa el conjunto y solo lo confirma después del recibo servidor', async () => {
   const start = main.indexOf('configurarEnvioScanner(formTicket,')
   const end = main.indexOf('// REGISTRO DE JABEROS', start)
   for (const onLine of [true, false]) {
     let handler
     const mensajes = []
+    const resultado = element()
     const ctx = {
       configurarEnvioScanner: (_form, _input, callback) => {
         handler = callback
@@ -208,20 +209,26 @@ test('éxito de asignación online y offline dice exactamente Ticket C71048263 a
       existeTicketPendiente: async () => false,
       guardarAsignacionOffline: async () => {},
       navigator: { onLine },
-      mostrarResultado: (mensaje, tipo) => mensajes.push({ mensaje, tipo }),
+      resultado,
+      mostrarResultado: (mensaje, tipo) => {
+        resultado.textContent = mensaje
+        mensajes.push({ mensaje, tipo })
+      },
+      obtenerColaCompleta: async () => [{ id: 'OP', estado: 'SINCRONIZADA' }],
       desactivarTecladoManual() {},
       setTimeout() {},
       prepararSiguienteCosechador() {},
       actualizarEstadoConexion: async () => {},
       sincronizarPendientes: async () => {}
     }
-    ctx.casosDeUso = casosDeUsoParaVista(ctx)
+    ctx.casosDeUso = { asignarTicket: async () => ({
+      estado: 'PENDIENTE', operacion: { id: 'OP' }, sincronizar: async () => onLine
+    }) }
     vm.runInNewContext(main.slice(start, end), ctx)
     await handler('C71048263', () => {})
-    assert.deepEqual(mensajes, [
-      { mensaje: 'Ticket C71048263 asignado', tipo: 'exito' }
-    ])
-    assert.doesNotMatch(mensajes[0].mensaje, /pendiente|guardado|sin conexión/i)
+    const esperados = [{ mensaje: 'Ticket C71048263 y conjunto de tickets relacionado reservados, pendientes de confirmación', tipo: 'exito' }]
+    if (onLine) esperados.push({ mensaje: 'Ticket C71048263 y conjunto de tickets relacionado asignados', tipo: 'exito' })
+    assert.deepEqual(mensajes, esperados)
   }
 })
 

@@ -21,7 +21,7 @@ import {
   contarPendientes,
   obtenerLotes,
   obtenerTicket,
-  obtenerTickets,
+  obtenerAsignacionesTickets,
   obtenerTrabajador,
   obtenerTrabajadores,
   obtenerLecturasSesion,
@@ -563,7 +563,7 @@ async function mostrarConsulta(configuracion) {
 
 async function prepararConsultaAsignadosHoy() {
   consultaBusqueda.placeholder = 'Buscar DNI, nombre o ticket...'
-  ticketsConsultaActual = await obtenerTickets()
+  ticketsConsultaActual = await obtenerAsignacionesTickets()
   consultaChips.replaceChildren()
   consultaChips.classList.add('oculto')
 
@@ -1977,9 +1977,13 @@ configurarEnvioScanner(formTicket, codigoTicketInput, async (codigoTicket, liber
     return
   }
   codigoTicketInput.disabled = true
-  let resultado
+  let respuestaAsignacion
   try {
-    resultado = await casosDeUso.asignarTicket({ operador, cosechador, codigoTicket })
+    respuestaAsignacion = await casosDeUso.asignarTicket({
+      operador,
+      cosechador,
+      codigoTicket
+    })
   } catch (error) {
     mostrarResultado(error.message, 'error')
     codigoTicketInput.disabled = false
@@ -1987,19 +1991,29 @@ configurarEnvioScanner(formTicket, codigoTicketInput, async (codigoTicket, liber
     return
   }
 
-  mostrarResultado(
-    resultado.estado === 'PENDIENTE'
-      ? `Lote del ticket ${codigoTicket} reservado, pendiente de confirmación`
-      : `Ticket ${codigoTicket} asignado`,
-    'exito'
-  )
+  const mensajeAsignacion =
+    respuestaAsignacion.estado === 'PENDIENTE'
+      ? `Ticket ${codigoTicket} y conjunto de tickets relacionado reservados, pendientes de confirmación`
+      : `Ticket ${codigoTicket} y conjunto de tickets relacionado asignados`
+  mostrarResultado(mensajeAsignacion, 'exito')
   desactivarTecladoManual(codigoTicketInput)
   setTimeout(prepararSiguienteCosechador, 1200)
   liberar()
   await actualizarEstadoConexion()
 
-  if (await resultado.sincronizar()) {
+  if (await respuestaAsignacion.sincronizar()) {
     await actualizarEstadoConexion()
+    const op = (await obtenerColaCompleta()).find(
+      (o) => o.id === respuestaAsignacion.operacion?.id
+    )
+    if (resultado.textContent === mensajeAsignacion) {
+      if (op?.estado === 'SINCRONIZADA')
+        mostrarResultado(
+          `Ticket ${codigoTicket} y conjunto de tickets relacionado asignados`,
+          'exito'
+        )
+      else if (op?.estado === 'ERROR') mostrarResultado(op.error, 'error')
+    }
   }
 })
 

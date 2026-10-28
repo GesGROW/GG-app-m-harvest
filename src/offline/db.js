@@ -384,6 +384,9 @@ export async function obtenerTickets() {
   return db.getAll('tickets')
 }
 
+export const obtenerAsignacionesTickets = (campaniaId) =>
+  harvestLocal.listarAsignaciones(campaniaId)
+
 export async function guardarTicketLocal({
   codigoTicket,
   cosechadorDni,

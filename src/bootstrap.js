@@ -14,7 +14,7 @@ import { configurarVistaAccesoEmpresa } from './modules/accesoEmpresa.js'
 import { crearVinculacionDispositivo } from './application/vinculacionDispositivo.js'
 import { crearDispositivoIndexedDB } from './infrastructure/indexeddb/dispositivoAdapter.js'
 import { crearDispositivoSupabase } from './infrastructure/supabase/dispositivoAdapter.js'
-import { comprobarTrabajoDispositivo } from './offline/db.js'
+import { comprobarTrabajoDispositivo, guardarOperador } from './offline/db.js'
 import { configurarVinculacionDispositivo } from './modules/vinculacionDispositivo.js'
 import {
   configurarSalidaDispositivo,
@@ -52,6 +52,7 @@ configurarBackend(protegerBackendDispositivo(campo, dispositivo))
 const casos = crearCasosDeUso({
   backend,
   offline: crearAdaptadoresOffline(),
+  asignacionPorLoteObligatoria: true,
   estaEnLinea: () => navigator.onLine,
   generarId: () => crypto.randomUUID(),
   ahora: () => new Date().toISOString(),
@@ -66,6 +67,7 @@ pantallaPda = await configurarVinculacionDispositivo({
   servicio: dispositivo,
   origenesQR: ['https://gg-app-m-harvest.vercel.app'],
   alIngresar: async (operador) => {
+    await guardarOperador(operador)
     sessionStorage.setItem('operador_dni', operador.dni)
     document.querySelector('#vista-vinculacion').classList.add('oculto')
     if (cargado) {

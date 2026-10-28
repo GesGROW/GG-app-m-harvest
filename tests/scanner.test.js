@@ -588,6 +588,8 @@ test('ASIGNAR TICKET permite otro ticket aunque la sincronización anterior siga
       obtenerTicket: async () => null,
       existeTicketPendiente: async () => false,
       guardarAsignacionOffline: async (asignacion) => asignaciones.push(asignacion),
+      obtenerColaCompleta: async () => [],
+      resultado: { textContent: '' },
       setTimeout() {},
       prepararSiguienteCosechador() {},
       sincronizarPendientes: () =>
