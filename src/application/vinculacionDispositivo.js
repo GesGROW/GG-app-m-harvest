@@ -1,3 +1,5 @@
+import { esErrorTemporal } from '@gesgrow/core/shared/erroresConexion.js'
+
 export function tokenVinculacion(valor, origen, otrosOrigenes = []) {
   const texto = String(valor ?? '').trim()
   if (/^[0-9a-f]{64}$/.test(texto)) return texto
@@ -74,6 +76,7 @@ export function crearVinculacionDispositivo({
     if (validacion) return validacion
     validacion = (async () => {
       const version = revision
+      let falloConsultaTemporal = false
       try {
         const sujeto = actual.sesionDni.usuarioId
         if (!enLinea()) {
@@ -85,9 +88,15 @@ export function crearVinculacionDispositivo({
           !autorizado ||
           ahora() - actual.autorizacion?.comprobadoEn >= 30000
         ) {
-          const respuesta = comprobar(
-            await remoto.ingresarConDni(actual, actual.sesionDni.dni)
-          )
+          let datos
+          try {
+            datos = await remoto.ingresarConDni(actual, actual.sesionDni.dni)
+          } catch (error) {
+            falloConsultaTemporal =
+              !error.accesoDenegado && (error.temporal || esErrorTemporal(error))
+            throw error
+          }
+          const respuesta = comprobar(datos)
           if (
             version !== revision ||
             respuesta.contexto.usuarioId !== sujeto ||
@@ -110,6 +119,26 @@ export function crearVinculacionDispositivo({
         return autorizado
       } catch (error) {
         if (version !== revision) throw error
+        if (
+          falloConsultaTemporal &&
+          actual.autorizacion?.sujeto === actual.sesionDni?.usuarioId &&
+          actual.sesionDni?.dni
+        ) {
+          try {
+            const guardado = comprobar(actual.autorizacion.datos)
+            if (
+              guardado.operador?.dni === actual.sesionDni.dni &&
+              guardado.contexto.usuarioId === actual.sesionDni.usuarioId
+            ) {
+              autorizado = guardado
+              return guardado
+            }
+          } catch {
+            /* Una autorización vencida nunca se reutiliza. */
+          }
+        }
+        if (falloConsultaTemporal)
+          error.message = 'Conéctate para renovar la autorización de este PDA.'
         autorizado = null
         bloqueado = true
         if (error.accesoDenegado) {

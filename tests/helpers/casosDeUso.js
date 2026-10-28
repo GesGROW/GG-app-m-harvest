@@ -1,10 +1,12 @@
 import { puertosOfflineParaFuentes } from './puertosOffline.js'
 import { crearCasosDeUso } from '../../src/application/crearCasosDeUso.js'
+import { mensajeErrorTickets } from '../../src/shared/mensajesTickets.js'
 
 // Las pruebas de presentación mantienen sus fuentes simuladas e invocan los
 // casos de uso reales. Los wrappers permiten modificar una fuente durante una
 // prueba, como una respuesta tardía o un cambio de conectividad.
 export function casosDeUsoParaVista(fuentes) {
+  fuentes.mensajeErrorTickets ??= mensajeErrorTickets
   const dependencias = {
     backend: {
       ...fuentes.backend,

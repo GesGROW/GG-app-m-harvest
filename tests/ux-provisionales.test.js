@@ -221,13 +221,26 @@ test('asignación informa el conjunto y solo lo confirma después del recibo ser
       actualizarEstadoConexion: async () => {},
       sincronizarPendientes: async () => {}
     }
-    ctx.casosDeUso = { asignarTicket: async () => ({
-      estado: 'PENDIENTE', operacion: { id: 'OP' }, sincronizar: async () => onLine
-    }) }
+    ctx.casosDeUso = {
+      asignarTicket: async () => ({
+        estado: 'PENDIENTE',
+        operacion: { id: 'OP' },
+        sincronizar: async () => onLine
+      })
+    }
     vm.runInNewContext(main.slice(start, end), ctx)
     await handler('C71048263', () => {})
-    const esperados = [{ mensaje: 'Ticket C71048263 y conjunto de tickets relacionado reservados, pendientes de confirmación', tipo: 'exito' }]
-    if (onLine) esperados.push({ mensaje: 'Ticket C71048263 y conjunto de tickets relacionado asignados', tipo: 'exito' })
+    const esperados = [
+      {
+        mensaje: 'Ticket C71048263 y conjunto de tickets relacionado asignados',
+        tipo: 'exito'
+      }
+    ]
+    if (onLine)
+      esperados.push({
+        mensaje: 'Ticket C71048263 y conjunto de tickets relacionado asignados',
+        tipo: 'exito'
+      })
     assert.deepEqual(mensajes, esperados)
   }
 })

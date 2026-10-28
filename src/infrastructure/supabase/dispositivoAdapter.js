@@ -4,8 +4,9 @@ export function crearDispositivoSupabase(cliente, operativo = cliente) {
     try {
       respuesta = await conexion.rpc(nombre, datos)
     } catch {
-      throw new Error(
-        'No se pudo conectar. Comprueba la conexión e inténtalo de nuevo.'
+      throw Object.assign(
+        new Error('No se pudo conectar. Comprueba la conexión e inténtalo de nuevo.'),
+        { temporal: true }
       )
     }
     if (respuesta.error) {
@@ -15,7 +16,17 @@ export function crearDispositivoSupabase(cliente, operativo = cliente) {
           ? 'Falta actualizar las funciones de vinculación de la base de datos.'
           : e.message || 'No se pudo validar el PDA.'
       )
-      error.accesoDenegado = e.code === '42501' || [401, 403].includes(e.status)
+      error.accesoDenegado =
+        e.code === '42501' || [401, 403].includes(Number(respuesta.status ?? e.status))
+      const status = Number(respuesta.status ?? e.status ?? e.code)
+      error.temporal =
+        !error.accesoDenegado &&
+        ([0, 408, 429].includes(status) ||
+          (status >= 500 && status < 600) ||
+          /fetch|network|timeout/i.test(e.message ?? ''))
+      if (error.temporal)
+        error.message =
+          'No se pudo conectar. Comprueba la conexión e inténtalo de nuevo.'
       throw error
     }
     return respuesta.data

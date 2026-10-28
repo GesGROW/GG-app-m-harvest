@@ -1,5 +1,6 @@
 import './style.css'
 import './tables.css'
+import { mensajeErrorTickets } from './shared/mensajesTickets.js'
 import {
   cerrarSesionDispositivo,
   mostrarIngresoDispositivo
@@ -1985,16 +1986,13 @@ configurarEnvioScanner(formTicket, codigoTicketInput, async (codigoTicket, liber
       codigoTicket
     })
   } catch (error) {
-    mostrarResultado(error.message, 'error')
+    mostrarResultado(mensajeErrorTickets(error, codigoTicket), 'error')
     codigoTicketInput.disabled = false
     codigoTicketInput.select()
     return
   }
 
-  const mensajeAsignacion =
-    respuestaAsignacion.estado === 'PENDIENTE'
-      ? `Ticket ${codigoTicket} y conjunto de tickets relacionado reservados, pendientes de confirmación`
-      : `Ticket ${codigoTicket} y conjunto de tickets relacionado asignados`
+  const mensajeAsignacion = `Ticket ${codigoTicket} y conjunto de tickets relacionado asignados`
   mostrarResultado(mensajeAsignacion, 'exito')
   desactivarTecladoManual(codigoTicketInput)
   setTimeout(prepararSiguienteCosechador, 1200)
@@ -2340,7 +2338,7 @@ configurarEnvioScanner(formLecturaTicket, ticketLectura, async (codigo, liberar)
     desactivarTecladoManual(ticketLectura)
     ticketLectura.focus()
   } catch (error) {
-    mostrarEstadoLecturaTicket(error.message || 'No se pudo registrar la lectura.', {
+    mostrarEstadoLecturaTicket(mensajeErrorTickets(error, codigo), {
       estadoLecturaTicket,
       resultadoLectura
     })

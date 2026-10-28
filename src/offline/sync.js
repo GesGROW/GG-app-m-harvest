@@ -9,6 +9,7 @@ import {
   guardarSnapshotHarvest
 } from './db.js'
 import { ejecutarCola } from './cola.js'
+import { mensajeErrorTickets } from '../shared/mensajesTickets.js'
 
 import { backend } from '@gesgrow/core/backend/backend.js'
 
@@ -52,6 +53,7 @@ export async function sincronizarPendientes() {
           await marcarOperacionTemporal(operacion.id, error.message)
           return
         }
+        error.message = mensajeErrorTickets(error, operacion.payload.codigoTicket)
         await rechazarOperacionHarvest(operacion, error)
         if (
           [

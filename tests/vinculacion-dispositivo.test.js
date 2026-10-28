@@ -206,6 +206,57 @@ test('empresa, campaña o actor ajenos no pueden adoptar la sesión ni enviar op
   await assert.rejects(s.validar({ forzar: true }), /no corresponde/)
   assert.ok(e.bloqueos.length)
 })
+
+test('E021: un fallo temporal conserva la sesión vigente sin volver al login', async () => {
+  const { e, s } = await preparar()
+  e.fallo(new TypeError('Failed to fetch'))
+  e.hora('2026-10-27T18:02:00Z')
+  assert.equal((await s.validar({ forzar: true })).operador.dni, '12345678')
+  assert.equal(e.bloqueos.length, 0)
+  assert.equal(e.dato().sesionDni.dni, '12345678')
+  await s.autorizarSolicitud({ dni: '12345678', campaniaId: 'C' })
+  e.fallo(null)
+  assert.equal((await s.validar({ forzar: true })).operador.dni, '12345678')
+})
+
+test('E021: ni una autorización vencida ni una respuesta inválida admiten fallback de red', async () => {
+  const { e, s } = await preparar()
+  e.fallo(new TypeError('Failed to fetch'))
+  e.hora('2026-10-28T05:00:01Z')
+  await assert.rejects(s.validar({ forzar: true }), /renovar la autorización/)
+  assert.equal(e.bloqueos.length, 1)
+  const otro = await preparar()
+  otro.e.respuesta({
+    ...otro.e.contexto(),
+    dispositivo: { id: 'D', tenantId: 'OTRA', estado: 'ACTIVO' }
+  })
+  await assert.rejects(otro.s.validar({ forzar: true }), /no corresponde/)
+  assert.equal(otro.e.bloqueos.length, 1)
+})
+
+test('E021: el adapter reconoce respuestas de transporte y no publica Failed to fetch', async () => {
+  for (const r of [
+    { data: null, error: { message: 'TypeError: Failed to fetch' }, status: 0 },
+    { data: null, error: { message: 'Gateway timeout' }, status: 504 }
+  ]) {
+    const adapter = crearDispositivoSupabase({ rpc: async () => r })
+    await assert.rejects(
+      adapter.ingresarConDni({ id: 'D', credencial: 'K' }, '12345678'),
+      (e) => e.temporal === true && !e.accesoDenegado && !/fetch/i.test(e.message)
+    )
+  }
+  const denegado = crearDispositivoSupabase({
+    rpc: async () => ({
+      data: null,
+      error: { message: 'Failed to fetch' },
+      status: 403
+    })
+  })
+  await assert.rejects(
+    denegado.ingresarConDni({ id: 'D', credencial: 'K' }, '12345678'),
+    (e) => e.accesoDenegado && !e.temporal
+  )
+})
 test('no permite cambiar cuenta mientras haya trabajo pendiente y no borra credenciales', async () => {
   const { e, s } = await preparar()
   e.pendientes()
