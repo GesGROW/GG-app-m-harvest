@@ -223,14 +223,16 @@ svg {
   height: 23px;
 }
 
-.icon-button svg:has(use[href='#icon-refresh']) {
+.icon-button svg:has(use[href='#icon-refresh']),
+.btn-contexto svg {
   width: 24px;
   height: 24px;
   color: var(--portal-ink);
   stroke-width: 2;
 }
 
-.icon-button:disabled svg:has(use[href='#icon-refresh']) {
+.icon-button:disabled svg:has(use[href='#icon-refresh']),
+.btn-contexto:disabled svg {
   color: var(--color-disabled-fg);
 }
 
