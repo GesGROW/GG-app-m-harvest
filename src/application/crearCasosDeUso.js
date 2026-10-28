@@ -22,6 +22,7 @@ import {
 } from '@gesgrow/core/contexts/harvest/index.js'
 import { sincronizacionPosterior } from './useCases/sincronizacionPosterior.js'
 import { crearResolverTenantContext } from '@gesgrow/core/contexts/platform/index.js'
+import { crearActualizacionCatalogoTickets } from './actualizarCatalogoTickets.js'
 
 // Coordinación del monolito modular: inyecta información pública mínima, sin
 // permitir que los contextos importen los internos de otros contextos.
@@ -121,6 +122,15 @@ export function crearCasosDeUso(dependencias) {
         )
       : crearRegistrarLecturaJaba(harvest),
     cerrarSesionLectura: crearCerrarSesionLectura(harvest)
+  }
+  if (offline.harvest?.guardarSnapshot) {
+    const conCatalogoActualizado = crearActualizacionCatalogoTickets({
+      backend: dependencias.backend,
+      harvestLocal: offline.harvest,
+      estaEnLinea: dependencias.estaEnLinea
+    })
+    for (const nombre of ['asignarTicket', 'registrarLecturaJaba'])
+      casos[nombre] = conCatalogoActualizado(casos[nombre])
   }
   // Ownership se resuelve desde la campaña persistida. La autoridad remota
   // continúa en los RPC; el puerto Identity de F6.2 podrá reforzar este límite.

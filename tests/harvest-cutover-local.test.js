@@ -12,6 +12,8 @@ import {
   EscrituraLegacyRetirada,
   CampaniaSinCutover,
   TicketYaUtilizado,
+  TicketNoEncontrado,
+  LoteYaAsignado,
   LoteDeTickets,
   Ticket
 } from '@gesgrow/core/contexts/harvest/index.js'
@@ -36,6 +38,34 @@ const asignar = () =>
   cases.asignarTicket({ operador, cosechador: { dni: DNI }, codigoTicket: 'T1' })
 const registrar = () =>
   cases.registrarLecturaJaba({ operador, sesionLectura, codigo: 'T1' })
+
+function nuevaGeneracion(asignacion = null) {
+  const inicial = snapshotHarvest({ cutover: politica })
+  const nueva = snapshotHarvest({
+    cutover: politica,
+    loteId: 'LT-NUEVO',
+    codigos: ['N1', 'N2'],
+    asignacion
+  })
+  return {
+    ...nueva,
+    lotesDeTickets: [...inicial.lotesDeTickets, ...nueva.lotesDeTickets],
+    tickets: [...inicial.tickets, ...nueva.tickets]
+  }
+}
+function casosConCatalogo(obtenerSnapshotHarvest, enLinea = true) {
+  return crearCasosDeUso({
+    offline: crearAdaptadoresOffline(),
+    backend: { obtenerSnapshotHarvest },
+    estaEnLinea: () => enLinea,
+    asignacionPorLoteObligatoria: true,
+    generarId: () => crypto.randomUUID(),
+    ahora: () => new Date().toISOString(),
+    registrarError() {}
+  })
+}
+const asignarNuevo = (casos, codigoTicket = 'N1') =>
+  casos.asignarTicket({ operador, cosechador: { dni: DNI }, codigoTicket })
 async function filas(store) {
   const db = await openDB('scc', 5)
   try {
@@ -103,6 +133,146 @@ test('Application exige renovar caché de versiones anteriores antes de crear nu
   await assert.rejects(registrar(), PoliticaHarvestDesconocida)
   assert.deepEqual(await filas('cola'), [])
   assert.deepEqual(await filas('harvestReservas'), [])
+})
+
+test('E023: descarga una generación posterior al ingreso y reserva una sola vez todo el lote', async () => {
+  await cache(politica)
+  let descargas = 0
+  const casos = casosConCatalogo(async (dni, campaniaId) => {
+    descargas++
+    assert.equal(dni, OP)
+    assert.equal(campaniaId, 'C')
+    assert.deepEqual(await filas('cola'), [])
+    return nuevaGeneracion()
+  })
+  const r = await asignarNuevo(casos)
+  assert.equal(descargas, 1)
+  assert.equal(r.estado, 'PENDIENTE')
+  assert.equal((await filas('cola')).length, 1)
+  assert.equal(
+    (await local.obtenerEstadoHarvest('N2')).lote.asignacion.operacionId,
+    r.operacion.id
+  )
+  await assert.rejects(asignarNuevo(casos, 'N2'), LoteYaAsignado)
+  assert.equal(descargas, 1)
+})
+
+test('E023: la renovación conserva reservas y lecturas pendientes de otros lotes', async () => {
+  await cache(politica)
+  const anterior = await asignar()
+  await registrar()
+  const antes = await filas('cola')
+  const casos = casosConCatalogo(async () => nuevaGeneracion())
+  await asignarNuevo(casos)
+  const despues = await filas('cola')
+  for (const op of antes)
+    assert.deepEqual(
+      despues.find((o) => o.id === op.id),
+      op
+    )
+  assert.equal(
+    (await local.obtenerEstadoHarvest('T2')).lote.asignacion.operacionId,
+    anterior.operacion.id
+  )
+  assert.equal(await local.contarLecturasSesion('S'), 1)
+})
+
+test('E023: un ticket inexistente tras renovar se rechaza sin bucles ni comandos', async () => {
+  await cache(politica)
+  let descargas = 0
+  const casos = casosConCatalogo(async () => {
+    descargas++
+    return nuevaGeneracion()
+  })
+  await assert.rejects(asignarNuevo(casos, 'NO-EXISTE'), TicketNoEncontrado)
+  assert.equal(descargas, 1)
+  assert.deepEqual(await filas('cola'), [])
+})
+
+test('E023: sin conexión distingue ticket no descargado y permite asignar los conocidos', async () => {
+  await cache(politica)
+  const casos = casosConCatalogo(async () => {
+    assert.fail('No debe consultar sin conexión')
+  }, false)
+  await assert.rejects(asignarNuevo(casos), /no está descargado.*Conéctate/)
+  assert.deepEqual(await filas('cola'), [])
+  await asignarNuevo(casos, 'T1')
+  assert.equal((await filas('cola')).length, 1)
+})
+
+test('E023: al renovar se respeta la asignación de otro PDA', async () => {
+  await cache(politica)
+  const casos = casosConCatalogo(async () =>
+    nuevaGeneracion({ trabajadorId: 'OTRO', operacionId: 'ASIG-REMOTA' })
+  )
+  await assert.rejects(asignarNuevo(casos), LoteYaAsignado)
+  assert.deepEqual(await filas('cola'), [])
+})
+
+test('E023: fallo de red no crea intención ni impide una renovación posterior', async () => {
+  await cache(politica)
+  let descargas = 0
+  const casos = casosConCatalogo(async () => {
+    if (++descargas === 1) throw new Error('No se pudo conectar')
+    return nuevaGeneracion()
+  })
+  await assert.rejects(asignarNuevo(casos), /No se pudo conectar/)
+  assert.deepEqual(await filas('cola'), [])
+  await asignarNuevo(casos)
+  assert.equal(descargas, 2)
+  assert.equal((await filas('cola')).length, 1)
+})
+
+test('E023: no guarda ni asigna tickets de otra campaña o empresa', async () => {
+  await cache(politica)
+  const ajena = casosConCatalogo(async () =>
+    snapshotHarvest({ campaniaId: 'D', codigos: ['N1'] })
+  )
+  await assert.rejects(asignarNuevo(ajena), /no corresponden a esta campaña/)
+  const otraEmpresa = casosConCatalogo(async () => ({
+    ...nuevaGeneracion(),
+    tenantId: crypto.randomUUID()
+  }))
+  await assert.rejects(asignarNuevo(otraEmpresa))
+  assert.deepEqual(await filas('cola'), [])
+  await assert.rejects(local.obtenerEstadoHarvest('N1'), TicketNoEncontrado)
+})
+
+test('E023: también renueva antes de leer un ticket nuevo ya asignado', async () => {
+  await cache(politica)
+  let descargas = 0
+  const casos = casosConCatalogo(async () => {
+    descargas++
+    return nuevaGeneracion(asignacion)
+  })
+  const lectura = await casos.registrarLecturaJaba({
+    operador,
+    sesionLectura,
+    codigo: 'N1'
+  })
+  assert.equal(descargas, 1)
+  assert.equal(lectura.total, 1)
+  assert.equal((await filas('cola')).length, 1)
+})
+
+test('E023: escaneos simultáneos comparten descarga y solo uno reserva el lote', async () => {
+  await cache(politica)
+  let descargas = 0
+  const casos = casosConCatalogo(async () => {
+    descargas++
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    return nuevaGeneracion()
+  })
+  const resultados = await Promise.allSettled([
+    asignarNuevo(casos),
+    asignarNuevo(casos, 'N2')
+  ])
+  assert.equal(descargas, 1)
+  assert.equal(resultados.filter((r) => r.status === 'fulfilled').length, 1)
+  assert.ok(
+    resultados.find((r) => r.status === 'rejected').reason instanceof LoteYaAsignado
+  )
+  assert.equal((await filas('cola')).length, 1)
 })
 
 test('antes del corte Application usa legacy explícito y conserva escaneos repetidos', async () => {
