@@ -90,7 +90,7 @@
         class="pantalla pantalla-login"
         aria-labelledby="pda-titulo"
       >
-        <div class="login-card card pda-card">
+        <div id="pda-card" class="login-card card pda-card">
           <img
             class="login-brand"
             src="/brand/gesgrow-logo.png"
@@ -98,7 +98,7 @@
             height="713"
             alt="GesGROW"
           />
-          <div class="pda-symbol" aria-hidden="true">
+          <div id="pda-symbol" class="pda-symbol" aria-hidden="true">
             <svg viewBox="0 0 24 24">
               <rect width="14" height="20" x="5" y="2" rx="2" />
               <path d="M12 18h.01" />
@@ -110,7 +110,6 @@
               Escanea el QR de la empresa con la cámara.
             </p>
           </div>
-          <p id="pda-empresa" class="pda-company"></p>
           <button id="pda-cambiar-qr" type="button" class="btn-secondary oculto">
             Escanear otro QR
           </button>
@@ -153,20 +152,49 @@
             <button type="submit" class="btn-primary">Validar cuenta</button>
           </form>
           <form id="pda-form-ingreso" class="form-stack oculto">
-            <label for="pda-dni">DNI del supervisor</label>
-            <input
-              id="pda-dni"
-              type="text"
-              inputmode="numeric"
-              pattern="[0-9]{8}"
-              maxlength="8"
-              autocomplete="username"
-              placeholder="Ingresa tu DNI"
-              required
-            />
+            <label for="pda-dni">DNI del operador</label>
+            <div class="campo-con-teclado scan-input">
+              <span class="scan-input__icon"
+                ><svg aria-hidden="true"><use href="#icon-scan"></use></svg
+              ></span>
+              <input
+                id="pda-dni"
+                type="text"
+                inputmode="none"
+                autocomplete="off"
+                placeholder="Escanee el DNI"
+              />
+              <button
+                id="pda-teclado"
+                type="button"
+                class="btn-teclado icon-button"
+                aria-label="Mostrar teclado"
+                aria-pressed="false"
+                aria-controls="pda-dni"
+              >
+                <svg aria-hidden="true"><use href="#icon-keyboard"></use></svg>
+              </button>
+            </div>
             <button type="submit" class="btn-primary">Ingresar</button>
           </form>
           <p id="pda-mensaje" class="mensaje" role="status" aria-live="polite"></p>
+          <section
+            id="pda-conexion"
+            class="pda-connection oculto"
+            aria-labelledby="pda-conexion-titulo"
+          >
+            <h2 id="pda-conexion-titulo">Dispositivo vinculado</h2>
+            <dl>
+              <div>
+                <dt>Empresa</dt>
+                <dd id="pda-empresa"></dd>
+              </div>
+              <div>
+                <dt>PDA</dt>
+                <dd id="pda-equipo"></dd>
+              </div>
+            </dl>
+          </section>
         </div>
       </section>
       <section id="vista-login" class="pantalla pantalla-login oculto">

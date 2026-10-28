@@ -19,14 +19,35 @@
   stroke-linecap: round;
   stroke-linejoin: round;
 }
-.pda-company {
-  padding: 12px 16px;
-  background: var(--portal-summary-surface);
-  border-radius: 16px;
-  overflow-wrap: anywhere;
+.pda-connection {
+  margin-top: var(--space-6);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--portal-border);
 }
-.pda-company:empty {
-  display: none;
+.pda-connection h2 {
+  margin: 0 0 var(--space-3);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+.pda-connection dl {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+}
+.pda-connection dl > div {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  gap: var(--space-3);
+  font-size: var(--font-size-sm);
+}
+.pda-connection dt {
+  color: var(--color-ink-600);
+}
+.pda-connection dd {
+  min-width: 0;
+  margin: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
 }
 .pda-camera {
   width: 100%;

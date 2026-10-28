@@ -16,7 +16,12 @@ almacenamiento crea una instalación nueva.
 5. Si el operador tiene campañas activas asignadas, se abre Cosecha.
 
 En aperturas posteriores se restaura la jornada vigente o se muestra solamente
-el ingreso por DNI. Los equipos que usaban PIN conservan UUID, credencial y
+el ingreso por DNI con el diseño anterior: tarjeta de 480 px en escritorio,
+campo de escaneo y botón para activar el teclado numérico. Debajo se muestran
+la empresa vinculada y el nombre del PDA. Esta sección describe el vínculo,
+sin confundirlo con el estado de Internet.
+
+Los equipos que usaban PIN conservan UUID, credencial y
 empresa; se elimina la referencia local a esa sesión y se pide el DNI sin
 repetir el QR. Las tablas y funciones históricas de PIN no se eliminan.
 

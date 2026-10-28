@@ -19,8 +19,9 @@ function nodo() {
     },
     setAttribute() {},
     focus() {},
+    blur() {},
     addEventListener: (e, f) => eventos.set(e, f),
-    emitir: (e) => eventos.get(e)?.({ preventDefault() {} })
+    emitir: (e, datos = {}) => eventos.get(e)?.({ preventDefault() {}, ...datos })
   }
 }
 const turno = () => new Promise((r) => setTimeout(r, 70))
@@ -209,4 +210,35 @@ test('ingreso diario solicita solamente DNI y no llama a Auth ni vuelve a vincul
     ['loginDni', '12345678'],
     ['ingresar', '12345678']
   ])
+})
+
+test('el ingreso recupera el campo de escaneo y el teclado manual del diseño anterior', async () => {
+  const e = preparar({ vinculado: true })
+  await e.iniciar()
+  assert.equal(e.nodes['#pda-card'].classList.contains('pda-card'), false)
+  assert.equal(e.nodes['#pda-symbol'].classList.contains('oculto'), true)
+  assert.equal(e.nodes['#pda-conexion'].classList.contains('oculto'), false)
+  assert.equal(e.nodes['#pda-empresa'].textContent, 'Empresa A')
+  assert.equal(e.nodes['#pda-equipo'].textContent, 'PDA Norte')
+  assert.equal(e.nodes['#pda-dni'].inputMode, 'none')
+  e.nodes['#pda-teclado'].emitir('click')
+  assert.equal(e.nodes['#pda-dni'].inputMode, 'numeric')
+  e.nodes['#pda-dni'].value = '12345678'
+  e.nodes['#pda-dni'].emitir('keydown', { key: 'Enter' })
+  await turno()
+  assert.equal(e.nodes['#pda-dni'].inputMode, 'none')
+  assert.deepEqual(e.llamadas, [
+    ['loginDni', '12345678'],
+    ['ingresar', '12345678']
+  ])
+})
+
+test('un PDA nuevo conserva el diseño de vinculación por cámara sin mostrar una empresa ficticia', async () => {
+  const e = preparar()
+  await e.iniciar()
+  assert.equal(e.nodes['#pda-card'].classList.contains('pda-card'), true)
+  assert.equal(e.nodes['#pda-symbol'].classList.contains('oculto'), false)
+  assert.equal(e.nodes['#pda-conexion'].classList.contains('oculto'), true)
+  assert.equal(e.nodes['#pda-empresa'].textContent, '')
+  assert.equal(e.nodes['#pda-equipo'].textContent, '')
 })

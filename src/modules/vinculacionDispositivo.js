@@ -1,5 +1,7 @@
 import { tokenVinculacion } from '../application/vinculacionDispositivo.js'
 import { crearLectorQrCamara } from './lectorQrCamara.js'
+import { configurarTecladoManual } from './tecladoManual.js'
+import { configurarEnvioScanner } from './scanner.js'
 
 export async function configurarVinculacionDispositivo({
   servicio,
@@ -14,6 +16,12 @@ export async function configurarVinculacionDispositivo({
   const formQr = buscar('pda-form-qr'),
     formCuenta = buscar('pda-form-cuenta')
   const nombre = buscar('pda-nombre')
+  const dniInput = buscar('pda-dni')
+  const ocultarTeclado = configurarTecladoManual(
+    dniInput,
+    buscar('pda-teclado'),
+    'numeric'
+  )
   const empresa = buscar('pda-empresa'),
     titulo = buscar('pda-titulo'),
     detalle = buscar('pda-detalle')
@@ -51,11 +59,12 @@ export async function configurarVinculacionDispositivo({
       : etapa === 'cuenta'
         ? 'Valida tu cuenta una sola vez para vincular este PDA.'
         : 'Ingresa con tu DNI para comenzar la jornada.'
-    empresa.textContent = d
-      ? `${d.empresa} · ${d.nombre}`
-      : token
-        ? 'QR de vinculación recibido.'
-        : ''
+    const esIngreso = etapa === 'ingreso'
+    buscar('pda-card').classList.toggle('pda-card', !esIngreso)
+    buscar('pda-symbol').classList.toggle('oculto', esIngreso)
+    buscar('pda-conexion').classList.toggle('oculto', !d || !esIngreso)
+    empresa.textContent = d?.empresa ?? ''
+    buscar('pda-equipo').textContent = d?.nombre ?? ''
     formQr.classList.toggle('oculto', !esQr)
     formCuenta.classList.toggle('oculto', etapa !== 'cuenta')
     buscar('pda-datos-equipo').classList.toggle('oculto', Boolean(d))
@@ -127,6 +136,7 @@ export async function configurarVinculacionDispositivo({
     etapa = servicio.vista() ? 'ingreso' : 'qr'
     recibirFragmento(enlaceInicial)
     render()
+    if (etapa === 'ingreso') dniInput.focus()
   } catch {
     mensaje.textContent =
       'No se pudo abrir el almacenamiento del PDA. Habilita el almacenamiento del navegador y recarga.'
@@ -163,13 +173,13 @@ export async function configurarVinculacionDispositivo({
       buscar('pda-dni').focus()
     })
   })
-  buscar('pda-form-ingreso').addEventListener('submit', (event) => {
-    event.preventDefault()
-    const dni = buscar('pda-dni').value.trim()
+  configurarEnvioScanner(buscar('pda-form-ingreso'), dniInput, (dni) =>
     tarea(async () => {
-      await ingresar(await servicio.iniciarConDni(dni))
+      const r = await servicio.iniciarConDni(dni)
+      ocultarTeclado()
+      await ingresar(r)
     })
-  })
+  )
   buscar('pda-cambiar-qr').addEventListener('click', () => {
     if (ocupado) return
     token = null
@@ -246,6 +256,7 @@ export async function configurarVinculacionDispositivo({
       mostrar()
       mensaje.textContent = error.message
       render()
+      if (etapa === 'ingreso') dniInput.focus()
     },
     async restaurar() {
       if (!servicio.haySesionDni()) return
