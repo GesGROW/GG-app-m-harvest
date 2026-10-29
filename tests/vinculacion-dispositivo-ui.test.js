@@ -188,16 +188,41 @@ test('si falla la reproducción de cámara cierra el stream y solicita revisar l
   assert.equal(e.nodes['#pda-video'].srcObject, null)
 })
 
-test('primera apertura muestra exclusivamente QR y no permite ingreso sin vincular', async () => {
+test('primera apertura muestra la bienvenida y no permite ingreso sin vincular', async () => {
   const e = preparar()
   await e.iniciar()
-  assert.equal(e.nodes['#pda-form-qr'].classList.contains('oculto'), false)
+  assert.equal(e.nodes['#pda-bienvenida'].classList.contains('oculto'), false)
+  assert.equal(e.nodes['#pda-form-qr'].classList.contains('oculto'), true)
   assert.equal(e.nodes['#pda-form-cuenta'].classList.contains('oculto'), true)
   assert.equal(e.nodes['#pda-form-ingreso'].classList.contains('oculto'), true)
   e.nodes['#pda-form-cuenta'].emitir('submit')
   await turno()
   assert.match(e.nodes['#pda-mensaje'].textContent, /Primero escanea/)
   assert.equal(e.llamadas.length, 0)
+})
+
+test('la flecha abre la cámara y un permiso rechazado conserva el reintento sin pedir cuenta', async () => {
+  const e = preparar()
+  let intentos = 0
+  e.navegador.BarcodeDetector = class {}
+  e.navegador.navigator.mediaDevices = {
+    getUserMedia: async () => {
+      intentos++
+      throw new Error('NotAllowedError')
+    }
+  }
+  await e.iniciar()
+  e.nodes['#pda-comenzar'].emitir('click')
+  await turno()
+  assert.equal(intentos, 1)
+  assert.equal(e.nodes['#pda-bienvenida'].classList.contains('oculto'), true)
+  assert.equal(e.nodes['#pda-form-qr'].classList.contains('oculto'), false)
+  assert.equal(e.nodes['#pda-form-cuenta'].classList.contains('oculto'), true)
+  assert.match(e.nodes['#pda-mensaje'].textContent, /Permite su acceso/)
+  e.nodes['#pda-camara'].emitir('click')
+  await turno()
+  assert.equal(intentos, 2)
+  assert.deepEqual(e.llamadas, [])
 })
 
 test('ingreso diario solicita solamente DNI y no llama a Auth ni vuelve a vincular', async () => {

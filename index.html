@@ -88,6 +88,7 @@
       <section
         id="vista-vinculacion"
         class="pantalla pantalla-login"
+        data-etapa="bienvenida"
         aria-labelledby="pda-titulo"
       >
         <div id="pda-card" class="login-card card pda-card">
@@ -100,33 +101,68 @@
           />
           <div id="pda-symbol" class="pda-symbol" aria-hidden="true">
             <svg viewBox="0 0 24 24">
-              <rect width="14" height="20" x="5" y="2" rx="2" />
-              <path d="M12 18h.01" />
+              <path
+                d="M13.465 3.464a5 5 0 017.07 0 5 5 0 010 7.072c-1.204 1.203-2.38 2.89-2.614 4.577A8 8 0 118.886 6.08c1.687-.235 3.375-1.41 4.579-2.615"
+              />
+              <circle cx="10" cy="14" r="3" />
             </svg>
           </div>
           <div class="login-copy">
-            <h1 id="pda-titulo">Vincular este PDA</h1>
+            <div class="pda-greeting">
+              <h1 id="pda-titulo">Hola</h1>
+              <svg
+                id="pda-saludo"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path
+                  d="m8 13 3-8a1.5 1.5 0 0 1 2.8 1l-2 5 2.5-7a1.5 1.5 0 0 1 2.8 1l-2.5 7 2-5a1.5 1.5 0 0 1 2.8 1l-2 5 1-2a1.5 1.5 0 0 1 2.8 1l-2 6a7 7 0 0 1-12 3l-4-5a1.5 1.5 0 0 1 2.3-1.9L8 16"
+                />
+              </svg>
+            </div>
             <p id="pda-detalle" class="subtitulo">
-              Escanea el QR de la empresa con la cámara.
+              Bienvenido a la app de <strong>Cosecha</strong>
             </p>
           </div>
-          <button id="pda-cambiar-qr" type="button" class="btn-secondary oculto">
-            Escanear otro QR
-          </button>
-          <div id="pda-form-qr" class="form-stack">
-            <button id="pda-camara" type="button" class="btn-primary">
-              Escanear QR con cámara
+          <div id="pda-bienvenida" class="pda-welcome-next">
+            <p>Vincula el dispositivo en el siguiente paso.</p>
+            <button id="pda-comenzar" type="button" aria-label="Vincular dispositivo">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="m9 4 8 8-8 8" />
+              </svg>
             </button>
-            <video
-              id="pda-video"
-              class="pda-camera oculto"
-              playsinline
-              muted
-              aria-label="Cámara para leer el QR"
-            ></video>
-            <button id="pda-detener-camara" type="button" class="btn-secondary oculto">
-              Cerrar cámara
-            </button>
+          </div>
+          <div id="pda-form-qr" class="form-stack oculto">
+            <div class="pda-camera-frame">
+              <video
+                id="pda-video"
+                class="pda-camera oculto"
+                playsinline
+                muted
+                aria-label="Cámara para leer el QR"
+              ></video>
+              <button id="pda-camara" type="button" class="btn-primary">
+                Escanear QR con cámara
+              </button>
+              <button
+                id="pda-detener-camara"
+                type="button"
+                class="btn-secondary oculto"
+                aria-label="Cerrar cámara"
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <use href="#icon-close"></use>
+                </svg>
+              </button>
+            </div>
+            <p class="pda-camera-instruction">
+              Apunta al QR de la empresa con la cámara.
+            </p>
           </div>
           <form id="pda-form-cuenta" class="form-stack oculto">
             <div id="pda-datos-equipo" class="form-stack">
@@ -151,6 +187,12 @@
             />
             <button type="submit" class="btn-primary">Validar cuenta</button>
           </form>
+          <div id="pda-otra-opcion" class="pda-other-option oculto">
+            <span>O</span>
+            <button id="pda-cambiar-qr" type="button" class="btn-secondary">
+              Escanear otro QR
+            </button>
+          </div>
           <form id="pda-form-ingreso" class="form-stack oculto">
             <label for="pda-dni">DNI del operador</label>
             <div class="campo-con-teclado scan-input">

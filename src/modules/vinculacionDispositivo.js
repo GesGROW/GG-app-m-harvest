@@ -29,7 +29,7 @@ export async function configurarVinculacionDispositivo({
     camara = buscar('pda-camara'),
     detener = buscar('pda-detener-camara')
   let token = null,
-    etapa = 'qr',
+    etapa = 'bienvenida',
     ocupado = false,
     flujoCamara = null,
     sesionCamara = 0
@@ -48,24 +48,28 @@ export async function configurarVinculacionDispositivo({
   function render() {
     const d = servicio.vista()
     const esQr = !d && !token
-    if (esQr) etapa = 'qr'
+    const esBienvenida = esQr && etapa === 'bienvenida'
+    vista.setAttribute('data-etapa', etapa)
     titulo.textContent = esQr
-      ? 'Vincular este PDA'
+      ? esBienvenida
+        ? 'Hola'
+        : 'Escanea el QR de la empresa'
       : etapa === 'cuenta'
-        ? 'Completar vinculación'
-        : 'Sistema de Control de Cosecha'
-    detalle.textContent = esQr
-      ? 'Escanea el QR de la empresa con la cámara.'
-      : etapa === 'cuenta'
-        ? 'Valida tu cuenta una sola vez para vincular este PDA.'
-        : 'Ingresa con tu DNI para comenzar la jornada.'
+        ? 'Completa tu vinculación'
+        : 'Hola'
+    detalle.innerHTML =
+      esBienvenida || etapa === 'ingreso'
+        ? 'Bienvenido a la app de <strong>Cosecha</strong>'
+        : ''
     const esIngreso = etapa === 'ingreso'
     buscar('pda-card').classList.toggle('pda-card', !esIngreso)
-    buscar('pda-symbol').classList.toggle('oculto', esIngreso)
+    buscar('pda-symbol').classList.toggle('oculto', !esBienvenida)
+    buscar('pda-saludo').classList.toggle('oculto', !esBienvenida && !esIngreso)
+    buscar('pda-bienvenida').classList.toggle('oculto', !esBienvenida)
     buscar('pda-conexion').classList.toggle('oculto', !d || !esIngreso)
     empresa.textContent = d?.empresa ?? ''
     buscar('pda-equipo').textContent = d?.nombre ?? ''
-    formQr.classList.toggle('oculto', !esQr)
+    formQr.classList.toggle('oculto', !esQr || esBienvenida)
     formCuenta.classList.toggle('oculto', etapa !== 'cuenta')
     buscar('pda-datos-equipo').classList.toggle('oculto', Boolean(d))
     buscar('pda-nombre').disabled = Boolean(d)
@@ -74,6 +78,7 @@ export async function configurarVinculacionDispositivo({
       'oculto',
       Boolean(d) || !token || etapa !== 'cuenta'
     )
+    buscar('pda-otra-opcion').classList.toggle('oculto', etapa !== 'cuenta')
     camara.disabled = !navegador.navigator.mediaDevices?.getUserMedia
   }
   async function tarea(accion) {
@@ -104,7 +109,7 @@ export async function configurarVinculacionDispositivo({
     ocultarCamara()
     etapa = 'cuenta'
     render()
-    buscar('pda-email').focus()
+    nombre.focus()
   }
   function extraerFragmento() {
     if (!navegador.location.hash.startsWith('#vincular=')) return null
@@ -133,7 +138,7 @@ export async function configurarVinculacionDispositivo({
   mostrar()
   try {
     await servicio.restaurar()
-    etapa = servicio.vista() ? 'ingreso' : 'qr'
+    etapa = servicio.vista() ? 'ingreso' : 'bienvenida'
     recibirFragmento(enlaceInicial)
     render()
     if (etapa === 'ingreso') dniInput.focus()
@@ -183,66 +188,71 @@ export async function configurarVinculacionDispositivo({
   buscar('pda-cambiar-qr').addEventListener('click', () => {
     if (ocupado) return
     token = null
+    etapa = 'qr'
     mensaje.textContent = ''
     render()
-    camara.focus()
+    tarea(abrirCamara)
   })
-  if (!servicio.vista() && !token && !navegador.navigator.mediaDevices?.getUserMedia)
-    mensaje.textContent =
-      'Abre la aplicación en un dispositivo con cámara y permite su acceso para escanear el QR.'
-  camara.addEventListener('click', () =>
-    tarea(async () => {
+  buscar('pda-comenzar').addEventListener('click', () => {
+    if (ocupado) return
+    etapa = 'qr'
+    render()
+    tarea(abrirCamara)
+  })
+  async function abrirCamara() {
+    etapa = 'qr'
+    render()
+    ocultarCamara()
+    const numero = sesionCamara
+    let detector, stream
+    try {
+      detector = await crearLectorQrCamara({ navegador, doc })
+      stream = await navegador.navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment' },
+        audio: false
+      })
+    } catch {
       ocultarCamara()
-      const numero = sesionCamara
-      let detector, stream
+      throw new Error(
+        'No se pudo abrir la cámara. Permite su acceso y vuelve a intentarlo.'
+      )
+    }
+    if (numero !== sesionCamara) {
+      stream.getTracks().forEach((t) => t.stop())
+      return
+    }
+    flujoCamara = stream
+    video.srcObject = stream
+    video.classList.remove('oculto')
+    detener.classList.remove('oculto')
+    try {
+      await video.play()
+    } catch {
+      ocultarCamara()
+      throw new Error(
+        'No se pudo iniciar la cámara. Revisa sus permisos y vuelve a intentarlo.'
+      )
+    }
+    async function leer() {
+      if (numero !== sesionCamara) return
       try {
-        detector = await crearLectorQrCamara({ navegador, doc })
-        stream = await navegador.navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'environment' },
-          audio: false
-        })
-      } catch {
-        ocultarCamara()
-        throw new Error(
-          'No se pudo abrir la cámara. Permite su acceso y vuelve a intentarlo.'
-        )
-      }
-      if (numero !== sesionCamara) {
-        stream.getTracks().forEach((t) => t.stop())
-        return
-      }
-      flujoCamara = stream
-      video.srcObject = stream
-      video.classList.remove('oculto')
-      detener.classList.remove('oculto')
-      try {
-        await video.play()
-      } catch {
-        ocultarCamara()
-        throw new Error(
-          'No se pudo iniciar la cámara. Revisa sus permisos y vuelve a intentarlo.'
-        )
-      }
-      async function leer() {
+        const codigos = await detector.detect(video)
         if (numero !== sesionCamara) return
-        try {
-          const codigos = await detector.detect(video)
-          if (numero !== sesionCamara) return
-          if (codigos.length) {
-            recibir(codigos[0].rawValue)
-            return
-          }
-        } catch (e) {
-          mensaje.textContent =
-            'No se pudo leer el QR. Apunta la cámara al código de vinculación y vuelve a intentarlo.'
-          ocultarCamara()
+        if (codigos.length) {
+          recibir(codigos[0].rawValue)
           return
         }
-        navegador.setTimeout(leer, 200)
+      } catch (e) {
+        mensaje.textContent =
+          'No se pudo leer el QR. Apunta la cámara al código de vinculación y vuelve a intentarlo.'
+        ocultarCamara()
+        return
       }
-      leer()
-    })
-  )
+      navegador.setTimeout(leer, 200)
+    }
+    leer()
+  }
+  camara.addEventListener('click', () => tarea(abrirCamara))
   detener.addEventListener('click', ocultarCamara)
   navegador.addEventListener('pagehide', ocultarCamara)
   doc.addEventListener?.('visibilitychange', () => {

@@ -7,7 +7,8 @@ almacenamiento crea una instalación nueva.
 ## Flujo
 
 1. En el portal, entrar a Cosecha → App de Cosecha y generar el QR de la empresa.
-2. Abrir la PWA en un PDA nuevo y pulsar «Escanear QR con cámara». Permitir el
+2. Abrir la PWA en un PDA nuevo y pulsar la flecha de bienvenida. La siguiente
+   pantalla abre la cámara. Permitir el
    acceso y apuntar al QR. Se conserva el lector nativo y el fallback local
    para navegadores sin BarcodeDetector. No se solicita escribir un enlace.
 3. Después del escaneo, validar una cuenta de la empresa con correo y contraseña
@@ -16,8 +17,8 @@ almacenamiento crea una instalación nueva.
 5. Si el operador tiene campañas activas asignadas, se abre Cosecha.
 
 En aperturas posteriores se restaura la jornada vigente o se muestra solamente
-el ingreso por DNI con el diseño anterior: tarjeta de 480 px en escritorio,
-campo de escaneo y botón para activar el teclado numérico. Debajo se muestran
+el ingreso por DNI: cabecera visual con la marca, fondo verde y superficie blanca,
+conservando el campo de escaneo y el botón para activar el teclado numérico. Debajo se muestran
 la empresa vinculada y el nombre del PDA. Esta sección describe el vínculo,
 sin confundirlo con el estado de Internet.
 

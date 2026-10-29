@@ -67,3 +67,253 @@
   min-width: 0;
   width: 100%;
 }
+
+/* Inicio y vinculación: la misma superficie en cada paso. */
+#vista-vinculacion {
+  --pda-inset: clamp(26px, 7.2vw, 38px);
+  display: flex;
+  justify-content: center;
+  align-items: stretch;
+  padding: max(55px, env(safe-area-inset-top)) 0 0;
+  background: #34af23;
+  color: #022f2a;
+}
+#vista-vinculacion::before {
+  content: none;
+}
+#vista-vinculacion .login-card {
+  display: flex;
+  flex-direction: column;
+  width: min(100%, 540px);
+  min-height: calc(100svh - max(55px, env(safe-area-inset-top)));
+  margin: 0;
+  padding: 22px var(--pda-inset) max(32px, env(safe-area-inset-bottom));
+  border: 0;
+  border-radius: 30px 30px 0 0;
+  background: #fff;
+}
+#vista-vinculacion .login-brand {
+  flex: none;
+  width: 106px;
+  height: auto;
+  margin: 0;
+}
+#vista-vinculacion .pda-symbol {
+  flex: 1;
+  width: 100%;
+  min-height: 210px;
+  margin: 0;
+  background: transparent;
+}
+#vista-vinculacion .pda-symbol svg {
+  width: 146px;
+  height: 146px;
+  stroke-width: 1.25;
+}
+#vista-vinculacion .login-copy {
+  margin: 36px 0 28px;
+}
+.pda-greeting {
+  display: flex;
+  align-items: baseline;
+  gap: 18px;
+}
+#vista-vinculacion .login-copy h1 {
+  max-width: none;
+  margin: 0;
+  font-size: 25px;
+  line-height: 1.2;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+}
+#pda-saludo {
+  width: 40px;
+  height: 40px;
+  flex: none;
+}
+#vista-vinculacion .subtitulo {
+  margin: 10px 0 0;
+  color: inherit;
+  font-size: 20px;
+  line-height: 1.4;
+}
+#vista-vinculacion .subtitulo:empty {
+  display: none;
+}
+#vista-vinculacion[data-etapa='bienvenida'] .login-copy {
+  margin: 0 0 clamp(56px, 12vh, 94px);
+}
+#vista-vinculacion[data-etapa='bienvenida'] h1,
+#vista-vinculacion[data-etapa='ingreso'] h1 {
+  font-size: 64px;
+  line-height: 1;
+  letter-spacing: -2px;
+}
+.pda-welcome-next {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+.pda-welcome-next p {
+  max-width: 215px;
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.85;
+}
+#pda-comenzar {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 60px;
+  height: 60px;
+  padding: 16px;
+  border: 0;
+  border-radius: 50%;
+  background: #d9d9d9;
+  color: inherit;
+}
+#pda-comenzar svg {
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+#pda-comenzar:is(:hover, :focus-visible):not(:disabled) {
+  background: #e3ebd5;
+}
+#vista-vinculacion[data-etapa='qr'] .login-copy {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+#pda-form-qr {
+  margin-top: 36px;
+  gap: 12px;
+}
+.pda-camera-frame {
+  position: relative;
+  display: grid;
+  place-items: center;
+  height: max(240px, calc(100svh - 272px));
+  background: #d9d9d9;
+}
+#pda-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  border-radius: 0;
+  object-fit: cover;
+}
+.pda-camera-frame:has(video:not(.oculto)) #pda-camara {
+  display: none;
+}
+#pda-camara {
+  width: auto;
+  max-width: calc(100% - 32px);
+}
+.pda-camera-instruction {
+  max-width: 250px;
+  margin: 18px 0 0;
+  font-size: 16px;
+  line-height: 1.85;
+}
+#pda-detener-camara {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  min-height: 40px;
+  padding: 10px;
+  background: #fff;
+  color: #022f2a;
+}
+#pda-detener-camara svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+#pda-form-cuenta {
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+#pda-form-cuenta label {
+  font-size: 17px;
+  font-weight: 500;
+}
+#pda-form-cuenta input {
+  min-height: 36px;
+  border: 1px solid #b4b4b4;
+  background: #fff;
+}
+#pda-datos-equipo {
+  gap: 8px;
+  margin-bottom: 24px;
+}
+#pda-form-cuenta label[for='pda-password'] {
+  margin-top: 4px;
+}
+#pda-form-cuenta .btn-primary {
+  justify-self: center;
+  width: auto;
+  min-width: 165px;
+  min-height: 44px;
+  margin-top: 28px;
+  background: #95b52c;
+  color: inherit;
+  font-size: 17px;
+  font-weight: 500;
+}
+.pda-other-option {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  margin-top: 10px;
+  font-size: 17px;
+}
+#pda-cambiar-qr {
+  width: auto;
+  min-width: 192px;
+  min-height: 44px;
+  background: #d9d9d9;
+  color: inherit;
+  font-size: 17px;
+  font-weight: 500;
+}
+#pda-form-cuenta .btn-primary:is(:hover, :focus-visible):not(:disabled) {
+  background: #a2bf3e;
+}
+#pda-cambiar-qr:is(:hover, :focus-visible):not(:disabled) {
+  background: #e3ebd5;
+}
+#vista-vinculacion[data-etapa='ingreso'] .login-copy {
+  margin-top: 42px;
+}
+@media (min-width: 600px) {
+  #vista-vinculacion {
+    padding-top: 55px;
+  }
+}
+@media (max-height: 650px) {
+  #vista-vinculacion[data-etapa='bienvenida'] .pda-symbol {
+    min-height: 140px;
+  }
+  #vista-vinculacion[data-etapa='bienvenida'] .login-copy {
+    margin-bottom: 40px;
+  }
+}
