@@ -78,7 +78,7 @@ export async function comprobarTrabajoDispositivo(
 ) {
   const db = await rawDbPromise
   const cola = (await db.getAll('cola')).filter(
-    (op) => !['SINCRONIZADA', 'DESCARTADA'].includes(op.estado)
+    (op) => !['SINCRONIZADA', 'DESCARTADA'].includes(op.estado) && !op.resueltaHarvest
   )
   const sesiones = (await db.getAll('sesiones')).filter((s) => s.estado === 'ACTIVA')
   if (salir && (cola.length || sesiones.length))
@@ -930,13 +930,19 @@ export async function contarErrores() {
   const db = await dbPromise
   const errores = await db.getAllFromIndex('cola', 'estado', 'ERROR')
 
-  return errores.filter((op) => (op.payload.campaniaId ?? '') === db.campaniaId).length
+  return errores.filter(
+    (op) => (op.payload.campaniaId ?? '') === db.campaniaId && !op.resueltaHarvest
+  ).length
 }
 
 export async function obtenerColaCompleta() {
   const db = await dbPromise
 
   return db.getAll('cola')
+}
+
+export async function obtenerOperacion(id) {
+  return (await dbPromise).get('cola', id)
 }
 
 export async function marcarOperacionSincronizada(id) {
@@ -998,6 +1004,7 @@ export async function reintentarOperacion(id) {
   const db = await dbPromise
   const operacion = await db.get('cola', id)
   if (!operacion || operacion.estado !== 'ERROR') return false
+  if (operacion.resueltaHarvest) return false
   if (operacion.retiradaPorCutover) return false
   if (operacion.modelo === 'HARVEST') return harvestLocal.reintentar(operacion)
   operacion.estado = 'PENDIENTE'

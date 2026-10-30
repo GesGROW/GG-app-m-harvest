@@ -123,6 +123,27 @@ async function preparar() {
   return { e, s }
 }
 
+test('las credenciales de transporte no quedan disponibles tras salir, revocación o vencimiento', async () => {
+  const { e, s } = await preparar()
+  assert.equal(s.credencialesSolicitud().dni, '12345678')
+  await s.salir()
+  assert.throws(
+    () => s.credencialesSolicitud(),
+    (e) => e.accesoDenegado
+  )
+  await s.iniciarConDni('87654321')
+  assert.equal(s.credencialesSolicitud().dni, '87654321')
+  e.fallo(Object.assign(new Error('Revocado'), { accesoDenegado: true }))
+  await assert.rejects(s.validar({ forzar: true }), /Revocado/)
+  assert.throws(
+    () => s.credencialesSolicitud(),
+    (e) => e.accesoDenegado
+  )
+  const otro = await preparar()
+  otro.e.hora('2026-10-28T05:00:01Z')
+  assert.throws(() => otro.s.credencialesSolicitud(), /venció/)
+})
+
 test('solo acepta el QR del mismo origen o el token del lector; rechaza destinos y parámetros extra', () => {
   assert.equal(tokenVinculacion(`${origen}/#vincular=${token}`, origen), token)
   assert.equal(tokenVinculacion(token, origen), token)

@@ -448,7 +448,7 @@ export function crearHarvestLocal({ dbPromise, crearOperacionEnTx }) {
       .objectStore('harvestReservas')
       .index('campania')
       .getAll(tx.campaniaId)) {
-      if (r.estado !== 'ACTIVA') continue
+      if (!['ACTIVA', 'RECHAZADA'].includes(r.estado)) continue
       const hecho = await get(
         tx,
         r.tipo === 'ASIGNACION' ? 'harvestAsignaciones' : 'harvestRegistros',
@@ -456,12 +456,32 @@ export function crearHarvestLocal({ dbPromise, crearOperacionEnTx }) {
       )
       if (hecho && hecho.operacionId !== r.operacionId) {
         const op = await tx.objectStore('cola').get(r.operacionId)
-        if (op)
+        if (op && r.estado === 'ACTIVA')
           await rechazarEnTx(
             tx,
             op,
             'El servidor confirmó otra operación para este recurso.'
           )
+        // Un hecho ganador confirmado resuelve el conflicto, conservando la
+        // intención rechazada y su prueba. Un fallo sin hecho sigue pendiente.
+        if (op && !op.resueltaHarvest && op.estado !== 'SINCRONIZADA') {
+          const rechazada = await tx.objectStore('cola').get(op.id)
+          if (rechazada.estado !== 'ERROR' || !rechazada.rechazoHarvest) continue
+          await tx.objectStore('cola').put({
+            ...rechazada,
+            resueltaHarvest: true,
+            resolucionHarvest: {
+              operacionId: hecho.operacionId,
+              registroId: hecho.id,
+              resueltaEn: new Date().toISOString()
+            }
+          })
+          await tx.objectStore('harvestReservas').put({
+            ...r,
+            estado: 'RECHAZADA',
+            autoridadIncierta: false
+          })
+        }
       }
     }
   }

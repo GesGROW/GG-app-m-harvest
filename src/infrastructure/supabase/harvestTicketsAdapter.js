@@ -54,9 +54,18 @@ export function crearRepositorioTicketsHarvestSupabase(supabase) {
           )
         // SQLSTATE numéricos (23505, 23503, etc.) no son estados HTTP.
         const status = Number(error?.status ?? error?.code)
-        throw new ErrorBackend(error?.message, {
-          status: status === 0 || (status >= 100 && status <= 599) ? status : undefined
-        })
+        throw Object.assign(
+          new ErrorBackend(error?.message, {
+            status:
+              status === 0 || (status >= 100 && status <= 599) ? status : undefined
+          }),
+          {
+            accesoDenegado:
+              error?.accesoDenegado ||
+              error?.code === '42501' ||
+              [401, 403].includes(status)
+          }
+        )
       }
       if (error?.code === '23505' && error.message === 'harvest_ticket_duplicado')
         throw new TicketDuplicado(error.details)

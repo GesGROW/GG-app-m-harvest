@@ -147,9 +147,11 @@ test('la cola conserva identificadores y parámetros; ASIGNAR_TICKET confirma un
 
 for (const [error, estado] of [
   [{ message: 'Failed to fetch' }, 'PENDIENTE'],
-  [{ status: 403, message: 'No autorizado' }, 'ERROR']
+  [{ status: 403, message: 'No autorizado' }, 'PENDIENTE'],
+  [{ code: '42501', message: 'PDA revocado' }, 'PENDIENTE'],
+  [{ code: 'P0001', message: 'Operación rechazada' }, 'ERROR']
 ]) {
-  test(`el error neutral conserva el estado ${estado} y bloquea los comandos posteriores`, async () => {
+  test(`el error ${error.code ?? error.status ?? 'de red'} conserva el estado ${estado} y bloquea los comandos posteriores`, async () => {
     let llamadas = 0
     configurarBackend(
       crearSupabaseBackend({

@@ -52,6 +52,19 @@ incluye estos recursos para que el diseño esté disponible sin conexión.
 
 ## Publicación y PDA
 
+La versión 0.1.1 envía la credencial del PDA en cada RPC operativo. Coordinar su
+distribución con la migración backend `20261030184601_pda_autorizacion_por_solicitud.sql`:
+preparar ambos, actualizar los PDA y luego aplicar la migración. Esta exige
+credencial incluso con el interruptor antiguo desactivado; un PDA anterior no
+podrá operar hasta actualizarse. Mantener el origen y IndexedDB para conservar
+los pendientes; no borrar almacenamiento ni desinstalar para forzar la actualización.
+La denegación de acceso conserva la cola y sus UUID para un reintento autorizado.
+
+Un consumo rechazado se marca conciliado únicamente cuando un snapshot confirma
+el registro ganador de otra operación. La intención original y su resolución se
+conservan como historial, sin bloquear el cambio de supervisor; los errores sin
+hecho confirmado siguen bloqueándolo.
+
 Publicar dist/ en un origen HTTPS dedicado, distinto del Portal. El manifiesto y el
 service worker tienen scope /. Para el nuevo hosting se debe actualizar la URL de
 instalación en el PDA. Esta migración de repositorios no cambia el hosting actual ni

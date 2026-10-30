@@ -175,6 +175,17 @@ export function crearVinculacionDispositivo({
   return Object.freeze({
     vista,
     haySesionDni,
+    credencialesSolicitud() {
+      if (bloqueado || !autorizado || !haySesionDni())
+        throw Object.assign(
+          new Error('Valida el acceso de este PDA antes de continuar.'),
+          {
+            accesoDenegado: true
+          }
+        )
+      comprobar(autorizado)
+      return { id: actual.id, credencial: actual.credencial, dni: actual.sesionDni.dni }
+    },
     async restaurar() {
       actual = await almacen.obtener()
       // Conservar el vínculo de instalaciones anteriores, sin restaurar el PIN.

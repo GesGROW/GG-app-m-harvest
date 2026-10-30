@@ -799,3 +799,90 @@ test('un timeout tardío no reactiva reservas ni dependientes rechazados durante
   assert.equal((await fila('harvestReservas', a.id)).estado, 'RECHAZADA')
   assert.equal(await local.contarLecturasSesion('S-C'), 0)
 })
+
+test('un consumo conciliado conserva auditoría y permite cambiar supervisor; un rechazo incierto sigue bloqueando', async () => {
+  await preparar('C', true)
+  const { operacion: c } = await consumir()
+  await local.rechazarOperacionHarvest(c, new TicketYaUtilizado('T1'))
+  await local.cerrarSesionLocal('S-C')
+  await assert.rejects(
+    local.comprobarTrabajoDispositivo(null, null, { salir: true }),
+    /pendientes/
+  )
+  const snapshot = snapshotHarvest({
+    asignacion,
+    registros: [
+      {
+        id: 'GANADOR',
+        codigoTicket: 'T1',
+        operacionId: 'OTRA',
+        sesionId: 'S-C',
+        fechaHora: FECHA
+      }
+    ]
+  })
+  await local.guardarSnapshotHarvest(snapshot)
+  const resuelta = await operacion(c.id)
+  assert.equal(resuelta.estado, 'ERROR')
+  assert.equal(resuelta.resueltaHarvest, true)
+  assert.equal(resuelta.resolucionHarvest.operacionId, 'OTRA')
+  assert.equal(resuelta.resolucionHarvest.registroId, 'GANADOR')
+  await local.guardarSnapshotHarvest(snapshot)
+  assert.deepEqual(await operacion(c.id), resuelta)
+  assert.equal(await local.reintentarOperacion(c.id), false)
+  assert.equal(await local.contarErrores(), 0)
+  await local.comprobarTrabajoDispositivo(null, null, { salir: true })
+  await local.comprobarTrabajoDispositivo('OTRA-EMPRESA', '99999999')
+  assert.equal((await local.obtenerColaCompleta()).length, 1)
+})
+
+test('la recuperación de 1000 comandos usa lecturas por ID sin recargar la cola para cada uno', async () => {
+  const db = await openDB('scc', 5)
+  const tx = db.transaction('cola', 'readwrite')
+  for (let i = 0; i < 1000; i++)
+    await tx.store.put({
+      id: 'Q-' + i,
+      tipo: 'CERRAR_SESION',
+      estado: 'PENDIENTE',
+      creado_en: new Date(Date.now() + i).toISOString(),
+      payload: { dniOperador: OP, campaniaId: 'C', sesionId: 'S-' + i }
+    })
+  await tx.done
+  const original = IDBObjectStore.prototype.getAll
+  let consultasCompletas = 0,
+    enviadas = 0
+  IDBObjectStore.prototype.getAll = function (...args) {
+    if (this.name === 'cola') consultasCompletas++
+    return original.apply(this, args)
+  }
+  configurarRemoto({
+    cerrarSesionLectura: async () => {
+      enviadas++
+      return {}
+    }
+  })
+  navigator.onLine = true
+  try {
+    await sincronizarPendientes()
+    assert.equal(enviadas, 1000)
+    assert.ok(consultasCompletas <= 2, `Se releyó la cola ${consultasCompletas} veces`)
+  } finally {
+    IDBObjectStore.prototype.getAll = original
+    db.close()
+  }
+})
+
+test('una denegación de acceso conserva el comando pendiente y su UUID para renovar el PDA', async () => {
+  const a = await asignar()
+  configurarRemoto({
+    asignarTicket: async () => {
+      throw Object.assign(new Error('PDA revocado'), { accesoDenegado: true })
+    }
+  })
+  navigator.onLine = true
+  await sincronizarPendientes()
+  const pendiente = await operacion(a.id)
+  assert.equal(pendiente.estado, 'PENDIENTE')
+  assert.equal(pendiente.id, a.id)
+  assert.equal(pendiente.rechazoHarvest, undefined)
+})

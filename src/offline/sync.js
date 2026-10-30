@@ -1,5 +1,6 @@
 import {
   obtenerColaCompleta,
+  obtenerOperacion,
   marcarOperacionSincronizada,
   marcarOperacionTemporal,
   marcarJabero,
@@ -49,7 +50,7 @@ export async function sincronizarPendientes() {
         await marcarOperacionSincronizada(operacion.id)
       },
       async (operacion, error, temporal) => {
-        if (temporal) {
+        if (temporal || error.accesoDenegado) {
           await marcarOperacionTemporal(operacion.id, error.message)
           return
         }
@@ -93,8 +94,7 @@ export async function sincronizarPendientes() {
 }
 
 async function procesarOperacion(operacion) {
-  const actuales = await obtenerColaCompleta()
-  const actual = actuales.find((o) => o.id === operacion.id)
+  const actual = await obtenerOperacion(operacion.id)
   if (!actual || actual.estado === 'SINCRONIZADA') return { omitida: true }
   if (actual?.estado === 'ERROR' && actual.rechazoHarvest) return { omitida: true }
   if (actual?.estado !== 'PENDIENTE')
@@ -102,7 +102,7 @@ async function procesarOperacion(operacion) {
   operacion = actual
   if (operacion.dependencias?.length) {
     for (const id of operacion.dependencias)
-      if (actuales.find((o) => o.id === id)?.estado !== 'SINCRONIZADA')
+      if ((await obtenerOperacion(id))?.estado !== 'SINCRONIZADA')
         throw new Error(`Dependencia ${id} no confirmada.`)
   }
   const compatibilidadV4 = operacion.origenVersion !== 5

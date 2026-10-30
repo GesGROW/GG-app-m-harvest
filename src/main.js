@@ -1801,7 +1801,8 @@ async function actualizarVistaSync() {
     .sort((a, b) => a.creado_en.localeCompare(b.creado_en))
   const pendientes = operaciones.filter((item) => item.estado === 'PENDIENTE')
   const errores = operaciones.filter((item) => item.estado === 'ERROR')
-  resumenSync.textContent = `${pendientes.length} pendientes · ${errores.length} errores`
+  const resueltas = errores.filter((op) => op.resueltaHarvest).length
+  resumenSync.textContent = `${pendientes.length} pendientes · ${errores.length - resueltas} errores${resueltas ? ` · ${resueltas} conciliadas` : ''}`
   operacionesError.replaceChildren()
   if (!errores.length) {
     operacionesError.textContent = 'No hay operaciones con error.'
@@ -1827,6 +1828,15 @@ async function actualizarVistaSync() {
     detalle.textContent = `${new Date(operacion.creado_en).toLocaleString()} · ${dato} · ${mensaje}`
     const acciones = document.createElement('div')
     acciones.className = 'acciones-sync'
+    if (operacion.resueltaHarvest) {
+      const resuelta = document.createElement('p')
+      resuelta.textContent =
+        'Conflicto conciliado con el registro del servidor. Se conserva como historial.'
+      acciones.append(resuelta)
+      card.append(titulo, detalle, acciones)
+      operacionesError.append(card)
+      continue
+    }
     const reintentar = document.createElement('button')
     reintentar.className = 'btn-primary'
     reintentar.textContent = 'Reintentar'

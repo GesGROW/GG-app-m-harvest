@@ -14,6 +14,7 @@ import { configurarVistaAccesoEmpresa } from './modules/accesoEmpresa.js'
 import { crearVinculacionDispositivo } from './application/vinculacionDispositivo.js'
 import { crearDispositivoIndexedDB } from './infrastructure/indexeddb/dispositivoAdapter.js'
 import { crearDispositivoSupabase } from './infrastructure/supabase/dispositivoAdapter.js'
+import { crearClientePda } from './infrastructure/supabase/clientePda.js'
 import { comprobarTrabajoDispositivo, guardarOperador } from './offline/db.js'
 import { configurarVinculacionDispositivo } from './modules/vinculacionDispositivo.js'
 import {
@@ -46,7 +47,9 @@ const dispositivo = crearVinculacionDispositivo({
   comprobarDatos: comprobarTrabajoDispositivo,
   alBloquear: (error) => pantallaPda?.bloquear(error)
 })
-const campo = crearSupabaseBackend(supabaseOperativo)
+const campo = crearSupabaseBackend(
+  crearClientePda(supabaseOperativo, () => dispositivo.credencialesSolicitud())
+)
 // Componer los contratos existentes sin reenviar comandos de otra cuenta.
 configurarBackend(protegerBackendDispositivo(campo, dispositivo))
 const casos = crearCasosDeUso({

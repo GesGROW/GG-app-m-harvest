@@ -26,7 +26,12 @@ export function crearSupabaseBackend(supabase) {
           status
         })
       }
-      throw new ErrorBackend(error?.message, { status })
+      throw Object.assign(new ErrorBackend(error?.message, { status }), {
+        accesoDenegado:
+          error?.accesoDenegado ||
+          error?.code === '42501' ||
+          [401, 403].includes(status)
+      })
     }
   }
 
