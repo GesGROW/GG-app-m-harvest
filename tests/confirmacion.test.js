@@ -1,7 +1,6 @@
+import { lecturaCampo } from './helpers/lecturaCampo.js'
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
 import test from 'node:test'
-import { runInNewContext } from 'node:vm'
 import { configurarConfirmacion } from '../src/modules/confirmacion.js'
 
 function crearConfirmacion() {
@@ -63,53 +62,39 @@ test('una segunda solicitud no provoca un cierre duplicado', async () => {
   assert.equal(await primera, true)
 })
 
-const main = readFileSync(new URL('../src/main.js', import.meta.url), 'utf8')
-const caminos = [
-  {
-    nombre: 'Finalizar lectura',
-    inicio: "btnFinalizarLectura.addEventListener('click', async () => {",
-    fin: '\n})'
-  },
-  {
-    nombre: 'Volver al menú con una sesión activa',
-    inicio: "btnVolverMenuLectura.addEventListener('click', async () => {",
-    fin: '\n})'
-  },
-  {
-    nombre: 'Finalizar una sesión restaurable',
-    inicio: "finalizar.addEventListener('click', async () => {",
-    fin: '\n    })'
-  }
-]
-
-for (const camino of caminos) {
-  test(`${camino.nombre} solo cierra la sesión tras confirmar en SCC`, async () => {
-    const inicio = main.indexOf(camino.inicio)
-    assert.notEqual(inicio, -1)
-    const cuerpoInicio = inicio + camino.inicio.length
-    const cuerpo = main.slice(cuerpoInicio, main.indexOf(camino.fin, cuerpoInicio))
-    const { dialogo, confirmar } = crearConfirmacion()
+for (const camino of ['finalizar', 'volver', 'restaurable']) {
+  test(`${camino} solo cierra la sesión tras confirmar en SCC`, async () => {
     let cierres = 0
-    const contexto = {
-      sesionLectura: { sesion_id: 'sesion-activa' },
-      sesion: { sesion_id: 'sesion-restaurable' },
-      confirmarFinalizarLectura: confirmar,
-      finalizarSesionLectura: async () => {
-        cierres++
-      },
-      mostrarMenu: () => assert.fail('No debe salir al cancelar'),
-      mostrarMensajeLectura: () => assert.fail('No debe mostrar un error')
-    }
-    const manejar = runInNewContext(`(async () => {${cuerpo}\n})`, contexto)
-    const cancelacion = manejar()
+    const sesion = { id: 'S', sesion_id: 'S', jabero: 'Ana', estado: 'ACTIVA' }
+    const campo = lecturaCampo({
+      sesionLectura: sesion,
+      obtenerSesionesActivas: async () => [sesion],
+      casosDeUso: {
+        cerrarSesionLectura: async () => {
+          cierres++
+          return { sincronizar: async () => false }
+        }
+      }
+    })
+    await campo.preparada
+    await campo.lectura.mostrarSesionesActivas()
+    const boton =
+      camino === 'restaurable'
+        ? campo.nodo('sesiones-restaurables').children[1].children[3]
+        : campo.nodo(
+            camino === 'finalizar' ? 'btn-finalizar-lectura' : 'btn-volver-menu-lectura'
+          )
+    const cancelacion = boton.emitir('click')
     assert.equal(cierres, 0)
-    dialogo.close('cancelar')
+    await campo.nodo('confirmacion-lectura').close('cancelar')
     await cancelacion
     assert.equal(cierres, 0)
-    const aceptacion = manejar()
+    assert.equal(campo.lectura.obtenerSesion().sesion_id, 'S')
+    const aceptacion = boton.emitir('click')
     assert.equal(cierres, 0)
-    dialogo.close('confirmar')
+    await campo.nodo('confirmacion-lectura').close('confirmar')
     await aceptacion
     assert.equal(cierres, 1)
+    assert.equal(campo.lectura.obtenerSesion(), null)
   })
 }

@@ -1,22 +1,18 @@
+import { formulariosCampo } from './helpers/formulariosCampo.js'
 import { snapshotHarvest } from './helpers/snapshotHarvest.js'
-import { casosDeUsoParaVista } from './helpers/casosDeUso.js'
 import 'fake-indexeddb/auto'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import test, { beforeEach } from 'node:test'
-import vm from 'node:vm'
 import { openDB } from 'idb'
 import * as local from '../src/offline/db.js'
-import * as asignados from '@gesgrow/core/contexts/harvest/application/queries/asignadosHoy.js'
-import * as jaberos from '@gesgrow/core/contexts/workforce/application/queries/jaberosCampania.js'
-import * as cosechadores from '@gesgrow/core/contexts/harvest/application/queries/cosechadoresJabas.js'
-import * as sesiones from '@gesgrow/core/contexts/harvest/application/queries/sesionesLectura.js'
-import * as produccionLotes from '@gesgrow/core/contexts/harvest/application/reports/produccionLotes.js'
-import { nombreCosechadorVisible } from '../src/modules/cosechadorLocal.js'
+import { crearConsultasOperativas } from '../src/application/crearConsultasOperativas.js'
+import { crearConsultasEnVista } from '../src/presentation/consultas/index.js'
+import { crearVistaProduccionLotes } from '../src/presentation/reportes/produccionLotes.js'
+import { documentoVista } from './helpers/elementoVista.js'
 import { crearSupabaseBackend } from '../src/infrastructure/supabase/backendAdapter.js'
 
 const read = (file) => readFileSync(new URL(file, import.meta.url), 'utf8')
-const main = read('../src/main.js')
 const html = read('../index.html')
 const base = (trabajadores = [], tickets = []) => ({
   campania: { id: 'campania-test', nombre: 'Campaña 2026', estado: 'ACTIVA' },
@@ -35,128 +31,78 @@ beforeEach(async () => {
   await local.guardarCache(base())
 })
 
-function element() {
-  const classes = new Set()
-  const attributes = new Map()
-  const selected = new Map()
-  return {
-    value: '',
-    textContent: '',
-    className: '',
-    children: [],
-    disabled: false,
-    dataset: {},
-    classList: {
-      add: (...items) => items.forEach((c) => classes.add(c)),
-      remove: (...items) => items.forEach((c) => classes.delete(c)),
-      contains: (c) => classes.has(c),
-      toggle(c, value = !classes.has(c)) {
-        value ? classes.add(c) : classes.delete(c)
-      }
-    },
-    append(...items) {
-      this.children.push(...items)
-    },
-    replaceChildren(...items) {
-      this.children = items
-    },
-    querySelector(selector) {
-      if (!selected.has(selector)) selected.set(selector, element())
-      return selected.get(selector)
-    },
-    querySelectorAll() {
-      return this.children
-    },
-    setAttribute: (name, value) => attributes.set(name, value),
-    removeAttribute: (name) => attributes.delete(name),
-    getAttribute: (name) => attributes.get(name),
-    focus() {},
-    select() {},
-    addEventListener() {}
-  }
-}
-
 function consulta(id, consultar = async () => ({ data: base() })) {
+  const document = documentoVista(html)
+  const names = {
+    tituloConsultaHeader: 'titulo-consulta-header',
+    btnActualizarConsulta: 'btn-actualizar-consulta',
+    consultaFeedback: 'consulta-feedback',
+    consultaBusqueda: 'consulta-busqueda',
+    consultaChips: 'consulta-chips',
+    consultaContador: 'consulta-contador',
+    consultaTablaHead: 'consulta-tabla-head',
+    consultaTablaBody: 'consulta-tabla-body',
+    consultaEmpty: 'consulta-empty',
+    consultaEmptyAccion: 'consulta-empty-accion',
+    vistaConsulta: 'vista-consulta'
+  }
   const nodes = Object.fromEntries(
-    [
-      'tituloConsultaHeader',
-      'btnActualizarConsulta',
-      'consultaFeedback',
-      'consultaBusqueda',
-      'consultaChips',
-      'consultaContador',
-      'consultaTablaHead',
-      'consultaTablaBody',
-      'consultaEmpty',
-      'consultaEmptyAccion',
-      'vistaConsulta'
-    ].map((n) => [n, element()])
+    Object.entries(names).map(([n, id]) => [n, document.querySelector(`#${id}`)])
   )
   const calls = []
-  const ctx = vm.createContext({
-    ...nodes,
-    ...local,
-    ...asignados,
-    ...jaberos,
-    ...cosechadores,
-    ...sesiones,
-    nombreCosechadorVisible,
-    document: { createElement: element },
+  const ctx = {
     operador: { dni: '47480378', campania: { id: 'campania-test' } },
-    consultaActual: null,
-    ticketsConsultaActual: [],
-    trabajadoresConsultaActual: [],
     sesionLectura: null,
-    sesionesConsultaActual: [],
-    cosechadoresJabasActual: [],
-    ordenCosechadoresJabas: cosechadores.ORDEN_COSECHADORES_JABAS.MAS_JABAS,
-    filtroSesionesLectura: sesiones.FILTROS_SESIONES_LECTURA.TODAS,
-    navigator: { onLine: true },
-    mostrarVista() {},
-    backend: crearSupabaseBackend({
-      rpc: async (name, args) => {
-        calls.push({ name, args })
-        if (name === 'harvest_obtener_snapshot')
-          return {
-            data: snapshotHarvest({
-              campaniaId: args.p_campania_id,
-              operadorDni: args.p_dni_operador,
-              codigos: []
-            })
-          }
-        return consultar()
-      }
-    })
+    navigator: { onLine: true }
+  }
+  let detalle = null
+  const backend = crearSupabaseBackend({
+    rpc: async (name, args) => {
+      calls.push({ name, args })
+      if (name === 'harvest_obtener_snapshot')
+        return {
+          data: snapshotHarvest({
+            campaniaId: args.p_campania_id,
+            operadorDni: args.p_dni_operador,
+            codigos: []
+          })
+        }
+      return consultar()
+    }
   })
-  const cache = read('../src/modules/cacheOperativa.js')
-  vm.runInContext(
-    cache.slice(cache.indexOf('export async')).replace('export ', ''),
-    ctx
-  )
-  vm.runInContext(
-    main.slice(
-      main.indexOf('async function mostrarConsulta('),
-      main.indexOf('function abrirDetalleSesionLectura(')
-    ),
-    ctx
-  )
-  vm.runInContext(
-    main.slice(
-      main.indexOf('async function actualizarConsultaOperativa('),
-      main.indexOf("btnActualizarConsulta.addEventListener('click'")
-    ),
-    ctx
-  )
+  const consultas = crearConsultasOperativas({
+    obtenerOperador: () => ctx.operador,
+    obtenerSesionLectura: () => ctx.sesionLectura,
+    lecturas: local,
+    actualizarCache: async (dni, campaniaId) =>
+      local.guardarCache(await backend.obtenerCacheOperativa(dni, campaniaId))
+  })
+  const vista = crearConsultasEnVista({
+    document,
+    consultas,
+    obtenerOperador: () => ctx.operador,
+    obtenerSesionLectura: () => ctx.sesionLectura,
+    estaEnLinea: () => ctx.navigator.onLine,
+    abrirDetalleSesionLectura: (sesion) => {
+      detalle = sesion
+    },
+    mostrarVista: (el) => el.classList.remove('oculto')
+  })
   return {
     ctx,
     nodes,
     calls,
     abrir: () =>
-      ctx.mostrarConsulta({
+      vista.abrir({
         id,
         titulo: id === 'asignados-hoy' ? 'Asignados hoy' : 'Jaberos de campaña'
       }),
-    actualizar: () => ctx.actualizarConsultaOperativa(),
+    actualizar: vista.actualizar,
+    salir: () => {
+      nodes.vistaConsulta.classList.add('oculto')
+      vista.alCambiarVista(null)
+    },
+    detalle: () => detalle,
     nombres: () =>
       nodes.consultaTablaBody.children.map((r) => r.children[0].children[0].textContent)
   }
@@ -190,58 +136,29 @@ for (const id of [
 }
 
 test('asignación informa el conjunto y solo lo confirma después del recibo servidor', async () => {
-  const start = main.indexOf('configurarEnvioScanner(formTicket,')
-  const end = main.indexOf('// REGISTRO DE JABEROS', start)
   for (const onLine of [true, false]) {
-    let handler
-    const mensajes = []
-    const resultado = element()
-    const ctx = {
-      configurarEnvioScanner: (_form, _input, callback) => {
-        handler = callback
-      },
-      formTicket: {},
-      codigoTicketInput: element(),
-      limpiarResultado() {},
-      operador: { dni: '47480378' },
+    const vista = formulariosCampo({
       cosechador: { dni: '43829105', nombre: 'Fausto Rodríguez' },
-      obtenerTicket: async () => null,
-      existeTicketPendiente: async () => false,
-      guardarAsignacionOffline: async () => {},
-      navigator: { onLine },
-      resultado,
-      mostrarResultado: (mensaje, tipo) => {
-        resultado.textContent = mensaje
-        mensajes.push({ mensaje, tipo })
+      casosDeUso: {
+        asignarTicket: async () => ({
+          estado: 'PENDIENTE',
+          operacion: { id: 'OP' },
+          sincronizar: async () => onLine
+        })
       },
-      obtenerColaCompleta: async () => [{ id: 'OP', estado: 'SINCRONIZADA' }],
-      desactivarTecladoManual() {},
-      setTimeout() {},
-      prepararSiguienteCosechador() {},
-      actualizarEstadoConexion: async () => {},
-      sincronizarPendientes: async () => {}
+      obtenerColaCompleta: async () => [{ id: 'OP', estado: 'SINCRONIZADA' }]
+    })
+    await vista.abrirAsignacion()
+    await vista.enviar('form-cosechador', '43829105')
+    await vista.enviar('form-ticket', 'C71048263')
+    const esperado = {
+      mensaje: 'Ticket C71048263 y conjunto de tickets relacionado asignados',
+      tipo: 'exito'
     }
-    ctx.casosDeUso = {
-      asignarTicket: async () => ({
-        estado: 'PENDIENTE',
-        operacion: { id: 'OP' },
-        sincronizar: async () => onLine
-      })
-    }
-    vm.runInNewContext(main.slice(start, end), ctx)
-    await handler('C71048263', () => {})
-    const esperados = [
-      {
-        mensaje: 'Ticket C71048263 y conjunto de tickets relacionado asignados',
-        tipo: 'exito'
-      }
-    ]
-    if (onLine)
-      esperados.push({
-        mensaje: 'Ticket C71048263 y conjunto de tickets relacionado asignados',
-        tipo: 'exito'
-      })
-    assert.deepEqual(mensajes, esperados)
+    assert.deepEqual(
+      vista.mensajesAsignacion,
+      onLine ? [esperado, esperado] : [esperado]
+    )
   }
 })
 
@@ -340,7 +257,7 @@ test('jaberos muestra Activo e Inactivo y conserva Pendiente y Error al refresca
   await vista.actualizar()
   assert.deepEqual(estados(), ['Activo', 'Inactivo', 'Pendiente', 'Error'])
   vista.nodes.consultaBusqueda.value = '80000003'
-  vista.ctx.renderJaberosCampania()
+  await vista.nodes.consultaBusqueda.emitir('input')
   assert.deepEqual(estados(), ['Pendiente'])
 })
 
@@ -445,7 +362,7 @@ test('dos Actualizar simultáneos hacen una consulta y no renderizan una vista a
   const primero = vista.actualizar()
   await vista.actualizar()
   assert.equal(vista.calls.length, 1)
-  vista.ctx.consultaActual = { id: 'otra-vista' }
+  vista.salir()
   resolve({ data: base([{ dni: '76338971', nombre: 'Marco', roles: ['JABERO'] }]) })
   await primero
   assert.deepEqual(vista.nombres(), [])
@@ -467,33 +384,17 @@ test('alta offline rechaza DNI inválido, inactivo y campaña cerrada sin encola
 })
 
 test('Registrar Jabero permite DNI desconocido desde el formulario online y offline', async () => {
-  const start = main.indexOf('configurarEnvioScanner(formJabero,')
-  const end = main.indexOf('// NAVEGACIÓN', start)
   for (const onLine of [true, false]) {
-    let handler
-    const mensajes = []
-    const ctx = {
+    const vista = formulariosCampo({
       ...local,
-      nombreCosechadorVisible,
-      configurarEnvioScanner: (_form, _input, callback) => {
-        handler = callback
-      },
-      esDniValido: (dni) => /^\d{8}$/.test(dni),
-      formJabero: {},
-      dniJaberoInput: element(),
-      limpiarResultadoJabero() {},
       operador: { dni: '47480378' },
       navigator: { onLine },
-      mostrarResultadoJabero: (mensaje, tipo) => mensajes.push({ mensaje, tipo }),
-      desactivarTecladoManual() {},
-      actualizarEstadoConexion: async () => {},
       sincronizarPendientes: async () => {}
-    }
-    ctx.casosDeUso = casosDeUsoParaVista(ctx)
-    vm.runInNewContext(main.slice(start, end), ctx)
+    })
+    await vista.abrirJaberos()
     const dni = onLine ? '76338980' : '76338981'
-    await handler(dni, () => {})
-    assert.deepEqual(mensajes, [
+    await vista.enviar('form-jabero', dni)
+    assert.deepEqual(vista.mensajesJabero, [
       { mensaje: `DNI ${dni} registrado como jabero`, tipo: 'exito' }
     ])
     assert.equal((await local.obtenerTrabajador(dni)).estado_sync_jabero, 'PENDIENTE')
@@ -557,7 +458,7 @@ test('Buscar asignación incluye días anteriores y busca por DNI, nombre o tick
   assert.deepEqual(vista.nombres(), ['Fausto Rodríguez'])
   for (const busqueda of ['43829105', 'fausto', 'ayer-01']) {
     vista.nodes.consultaBusqueda.value = busqueda
-    vista.ctx.renderAsignadosHoy()
+    await vista.nodes.consultaBusqueda.emitir('input')
     assert.deepEqual(vista.nombres(), ['Fausto Rodríguez'])
   }
   const hoy = consulta('asignados-hoy')
@@ -596,13 +497,9 @@ test('Cosechadores y jabas refresca nombres y conserva el orden operativo', asyn
   await vista.abrir()
   assert.deepEqual(vista.nombres(), ['DNI 43829105'])
   assert.equal(vista.nodes.btnActualizarConsulta.classList.contains('oculto'), false)
-  vista.ctx.ordenCosechadoresJabas = cosechadores.ORDEN_COSECHADORES_JABAS.AZ
+  await vista.nodes.consultaChips.children[2].emitir('click')
   await vista.actualizar()
   assert.deepEqual(vista.nombres(), ['Fausto Rodríguez'])
-  assert.equal(
-    vista.ctx.ordenCosechadoresJabas,
-    cosechadores.ORDEN_COSECHADORES_JABAS.AZ
-  )
   assert.equal(
     vista.nodes.consultaChips.children[2].getAttribute('aria-pressed'),
     'true'
@@ -623,13 +520,9 @@ test('Sesiones refresca nombres y conserva Activas/Cerradas sin perder lecturas 
     data: base([{ dni: '76338971', nombre: 'Marco Góngora', roles: ['JABERO'] }])
   }))
   await vista.abrir()
-  vista.ctx.filtroSesionesLectura = sesiones.FILTROS_SESIONES_LECTURA.ACTIVAS
+  await vista.nodes.consultaChips.children[1].emitir('click')
   await vista.actualizar()
   assert.deepEqual(vista.nombres(), ['Marco Góngora'])
-  assert.equal(
-    vista.ctx.filtroSesionesLectura,
-    sesiones.FILTROS_SESIONES_LECTURA.ACTIVAS
-  )
   assert.equal(
     vista.nodes.consultaChips.children[1].getAttribute('aria-pressed'),
     'true'
@@ -662,31 +555,13 @@ test('lista, búsqueda y detalle de sesiones usan el nombre del lote sin cambiar
     vista.nodes.consultaTablaBody.children[0].children[0].children[1].textContent
   assert.equal(resumen(), 'Campo Norte · Biloxi')
   vista.nodes.consultaBusqueda.value = 'campo norte'
-  vista.ctx.renderSesionesLectura()
+  await vista.nodes.consultaBusqueda.emitir('input')
   assert.equal(resumen(), 'Campo Norte · Biloxi')
   const registro = (await local.obtenerSesionesOperador('47480378'))[0]
   assert.equal(registro.lote_codigo, 'L-1')
 
-  Object.assign(vista.ctx, {
-    contextTitle: element(),
-    contextOptions: element(),
-    contextOverlay: element(),
-    btnCerrarContexto: element()
-  })
-  vm.runInContext(
-    main.slice(
-      main.indexOf('function abrirDetalleSesionLectura('),
-      main.indexOf('async function abrirResumenCampania(')
-    ),
-    vista.ctx
-  )
-  vista.ctx.abrirDetalleSesionLectura(vista.ctx.sesionesConsultaActual[0])
-  const campos = vista.ctx.contextOptions.children[0].children
-  assert.equal(
-    campos.find((grupo) => grupo.children[0].textContent === 'Lote').children[1]
-      .textContent,
-    'Campo Norte'
-  )
+  await vista.nodes.consultaTablaBody.children[0].emitir('click')
+  assert.equal(vista.detalle().lote_nombre, 'Campo Norte')
 })
 
 test('producción muestra nombres locales y ordena A–Z por el nombre visible', async () => {
@@ -699,48 +574,31 @@ test('producción muestra nombres locales y ordena A–Z por el nombre visible',
     total_cosechadores: 1,
     total_sesiones: 1
   }))
-  const ctx = vm.createContext({
-    ...produccionLotes,
-    operador: { dni: '47480378' },
-    navigator: { onLine: true },
-    backend: { obtenerProduccionLotes: () => {} },
-    consultarCampania: async () => ({
+  const document = documentoVista(html)
+  const nodo = (id) => document.querySelector(`#${id}`)
+  const vista = crearVistaProduccionLotes({
+    document,
+    mostrarVista() {},
+    estaEnLinea: () => true,
+    consultar: async () => ({
       ok: true,
       campania: { id: 'C', nombre: 'Campaña' },
       produccion: filas
     }),
-    obtenerLotes: async () => [{ lote_id: 'norte', nombre: 'Campo Z' }],
-    ordenProduccionLotes: produccionLotes.ORDEN_PRODUCCION_LOTES.AZ,
-    produccionLotesActual: [],
-    lotesBusqueda: { value: '' },
-    btnActualizarLotes: element(),
-    btnReintentarLotes: element(),
-    lotesCampania: element(),
-    lotesResumen: element(),
-    lotesEmpty: element(),
-    lotesLista: element(),
-    mostrarFeedbackLotes() {},
-    ocultarFeedbackLotes() {},
-    formatearNumero: String,
-    document: { createElement: element }
+    obtenerLotes: async () => [{ lote_id: 'norte', nombre: 'Campo Z' }]
   })
-  vm.runInContext(
-    main.slice(
-      main.indexOf('async function cargarProduccionLotes()'),
-      main.indexOf('function actualizarControlesOrdenLotes()')
-    ),
-    ctx
-  )
-  await ctx.cargarProduccionLotes()
+  await vista.abrir()
+  await nodo('btn-orden-lotes-az').emitir('click')
   const nombres = () =>
-    ctx.lotesLista.children.map(
+    nodo('lotes-lista').children.map(
       (card) => card.children[0].children[0].children[0].textContent
     )
   assert.deepEqual(nombres(), ['Campo A', 'Campo Z'])
-  ctx.lotesBusqueda.value = 'Campo Z'
-  ctx.renderProduccionLotes()
+  nodo('lotes-busqueda').value = 'Campo Z'
+  await nodo('lotes-busqueda').emitir('input')
   assert.deepEqual(nombres(), ['Campo Z'])
-  assert.equal(ctx.produccionLotesActual[0].lote_codigo, 'A-1')
+  assert.equal(filas[0].lote_codigo, 'A-1')
+  assert.equal(filas[0].lote_nombre, 'Anterior')
 })
 
 test('cada reporte conserva AppBar, contexto de campaña y refresco solo por icono', () => {

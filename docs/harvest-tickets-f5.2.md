@@ -44,23 +44,7 @@ Las tablas de asignación y registro preparan la persistencia de todos los estad
 
 `harvest_resolver_ticket` obtiene únicamente el ticket del código y campaña indicados, el lote y las posibles asignación y cosecha. Una coincidencia en otra campaña no revela sus datos. El mapper construye instancias nuevas: se conservan la asignación idempotente y el rechazo del ticket utilizado después de volver a consultar.
 
-La composición optativa `pwa/src/infrastructure/supabase/crearTicketsHarvest.js` conecta casos, repositorio y generador sin modificar el arranque del PDA:
-
-```js
-import { crearTicketsHarvest } from '../src/infrastructure/supabase/crearTicketsHarvest.js'
-
-// Cliente autenticado e integración ya autorizada para esta campaña.
-const harvest = crearTicketsHarvest({ supabase })
-const generacion = await harvest.generarLotesDeTickets({
-  campaniaId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
-  cantidadTickets: 40,
-  tamanioLote: 10
-})
-const catalogo = await harvest.resolverCatalogoDeTickets({
-  campaniaId: generacion.lotes[0].campaniaId,
-  codigoTicket: generacion.tickets[0].codigo
-})
-```
+La composición optativa `crearTicketsHarvest` se retiró de la fuente activa de la PWA durante la limpieza del 30/10/2026: no tenía consumidores de ejecución ni pruebas en este repositorio. Las pruebas SQL del backend conservan su implementación en la instantánea histórica `@gesgrow/harvest-client-contracts` 0.1.1; no se modificó ese paquete. Para una integración nueva, las factorías de casos de uso siguen disponibles en la API pública de Harvest y el adapter `crearRepositorioTicketsHarvestSupabase` sigue implementando su puerto.
 
 La migración requiere el esquema y la autorización por campaña de las migraciones anteriores, incluida `202610110500_sheets_por_campania.sql`. Se añade y prueba localmente; no se despliega automáticamente a una instancia remota.
 

@@ -22,7 +22,7 @@ UI → intención local ASIGNAR_TICKET
 
 El payload sigue siendo `{ dniOperador, dniCosechador, codigoTicket, campaniaId }`. `operacionId` sigue en la identidad de la operación y se envía al sincronizar. No cambian versión 4, object stores, estados, partición por campaña ni políticas de reintento/descarte de IndexedDB. Un fallo temporal conserva la operación pendiente con el mismo UUID; un rechazo definitivo marca el código local con error y conserva el bloqueo de cola existente.
 
-`crearAsignarLoteDeTickets` recibe código, cosechador o trabajador, campaña, operador y operación. No consulta un catálogo previamente para decidir ni recibe filas SQL. Pasa el contexto al puerto transaccional y devuelve `CatalogoDeTickets`, `LoteDeTickets`, `Ticket` y `AsignacionDeLote` reconstruidos. También está disponible en la composición `crearTicketsHarvest`.
+`crearAsignarLoteDeTickets` recibe código, cosechador o trabajador, campaña, operador y operación. No consulta un catálogo previamente para decidir ni recibe filas SQL. Pasa el contexto al puerto transaccional y devuelve `CatalogoDeTickets`, `LoteDeTickets`, `Ticket` y `AsignacionDeLote` reconstruidos. La composición histórica `crearTicketsHarvest` permanece en la instantánea 0.1.1 usada por las pruebas SQL del backend; se retiró de la fuente activa de la PWA por falta de consumidores.
 
 No hay fallback al RPC de asignación por ticket, ni inferencia de campaña si falta contexto. Los tickets deben generarse con F5.2 y la migración nueva debe aplicarse antes de distribuir este cliente. Una intención antigua pendiente cuyo código no exista en `harvest_tickets` se rechaza; no se crea un lote implícito ni se migran asignaciones históricas.
 

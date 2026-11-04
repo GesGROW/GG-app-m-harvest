@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { readFileSync } from 'node:fs'
-import vm from 'node:vm'
+import { ingresoCampo } from './helpers/ingresoCampo.js'
 import {
   fechaOperativa,
   autorizacionOperadorVigente
@@ -83,36 +82,25 @@ test('guarda la fecha autorizada por el servidor y nunca sustituye un rechazo po
 })
 
 test('una sesión vencida vuelve al login antes de procesar un escaneo', async () => {
-  const main = readFileSync(new URL('../src/main.js', import.meta.url), 'utf8')
-  const inicio = main.indexOf('function verificarVigenciaOperador()')
-  const fin = main.indexOf('// LOGIN', inicio)
-  let enviar
-  let procesados = 0
-  let retornosLogin = 0
-  const formLogin = {}
-  const ctx = vm.createContext({
-    operador: { dni, autorizado_para_fecha: '2026-10-03' },
-    autorizacionOperadorVigente: (o) =>
-      autorizacionOperadorVigente(o, new Date('2026-10-04T05:00:00Z')),
-    formLogin,
-    vistaLogin: {},
-    mostrarVista: () => {
-      retornosLogin++
+  const campo = ingresoCampo(
+    {
+      operador: { dni, campanias: [{ id: 'A' }], autorizado_para_fecha: '2026-10-03' }
     },
-    configurarScanner: (_form, _input, callback) => {
-      enviar = callback
+    {
+      esAutorizacionVigente: (o) =>
+        autorizacionOperadorVigente(o, new Date('2026-10-04T05:00:00Z'))
     }
-  })
-  vm.runInContext(main.slice(inicio, fin), ctx)
-  ctx.configurarEnvioScanner({}, {}, async () => {
-    procesados++
-  })
-  await enviar('12345678')
+  )
+  await campo.restaurar('A')
+  let procesados = 0
+  const form = {}
+  campo.ingreso.configurarEnvioScanner(form, {}, async () => procesados++)
+  await campo.envios.get(form)('12345678')
   assert.equal(procesados, 0)
-  assert.equal(retornosLogin, 1)
-  ctx.configurarEnvioScanner(formLogin, {}, async () => {
-    procesados++
-  })
-  await enviar('12345678')
+  assert.equal(campo.ingreso.obtenerOperador(), null)
+  assert.equal(campo.consultas.at(-1)[1], 'vista-login')
+  const formLogin = campo.nodo('form-login')
+  campo.ingreso.configurarEnvioScanner(formLogin, {}, async () => procesados++)
+  await campo.envios.get(formLogin)('12345678')
   assert.equal(procesados, 1)
 })

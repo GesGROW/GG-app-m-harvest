@@ -1,9 +1,7 @@
-import { casosDeUsoParaVista } from './helpers/casosDeUso.js'
+import { lecturaCampo } from './helpers/lecturaCampo.js'
 import 'fake-indexeddb/auto'
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { readFileSync } from 'node:fs'
-import { runInNewContext } from 'node:vm'
 
 import {
   contarLecturasCosechador,
@@ -143,39 +141,16 @@ test('las tarjetas de sesiones activas muestran el nombre del lote desde la cach
     },
     { ...sesion('tarjeta-sin-nombre'), lote_id: 'lote-3', id: 'tarjeta-sin-nombre' }
   ]
-  const crearNodo = () => ({
-    ...elemento(),
-    children: [],
-    replaceChildren() {
-      this.children = []
-    },
-    append(...hijos) {
-      this.children.push(...hijos)
-    },
-    addEventListener() {}
-  })
-  const tarjetas = crearNodo()
   let consultasLotes = 0
-  const main = readFileSync(new URL('../src/main.js', import.meta.url), 'utf8')
-  const contexto = {
-    operador: { dni: '12345678' },
+  const campo = lecturaCampo({
     obtenerSesionesActivas: async () => sesiones,
     obtenerLotes: async () => {
       consultasLotes++
       return [{ lote_id: 'lote-1', codigo: 'L1', nombre: ' Campo Norte ' }]
-    },
-    contarLecturasSesion: async () => 0,
-    sesionesRestaurables: tarjetas,
-    document: { createElement: crearNodo }
-  }
-  runInNewContext(
-    main.slice(
-      main.indexOf('async function mostrarSesionesActivas()'),
-      main.indexOf('// CERRAR SESIÓN')
-    ),
-    contexto
-  )
-  await contexto.mostrarSesionesActivas()
+    }
+  })
+  await campo.lectura.mostrarSesionesActivas()
+  const tarjetas = campo.nodo('sesiones-restaurables')
   assert.deepEqual(
     tarjetas.children.slice(1).map((fila) => fila.children[0].textContent),
     [
@@ -213,15 +188,8 @@ test('una sesión válida oculta el error previo de configuración', async () =>
 })
 
 function escaneoSimulado({ onLine = false, errorGuardar = null } = {}) {
-  const elementos = vista()
   const lecturas = []
-  let procesar
   const contexto = {
-    ...elementos,
-    formLecturaTicket: {},
-    configurarEnvioScanner: (_form, _input, callback) => {
-      procesar = callback
-    },
     sesionLectura: { sesion_id: 'sesion-ui', dni_jabero: '76338971' },
     operador: { dni: '47480378' },
     obtenerTrabajador: async () => ({ estado_sync_jabero: 'SINCRONIZADO' }),
@@ -242,24 +210,16 @@ function escaneoSimulado({ onLine = false, errorGuardar = null } = {}) {
     },
     contarLecturasSesion: async () => lecturas.length,
     contarLecturasCosechador: async () => lecturas.length,
-    nombreCosechadorVisible: (nombre, dni) => nombre || `DNI ${dni}`,
-    mostrarContadorCosechador,
-    mostrarEstadoLecturaTicket,
-    desactivarTecladoManual() {},
     navigator: { onLine },
     sincronizarPendientes: async () => {},
     actualizarEstadoConexion: async () => {}
   }
-  const main = readFileSync(new URL('../src/main.js', import.meta.url), 'utf8')
-  const inicio = main.indexOf('configurarEnvioScanner(formLecturaTicket,')
-  const fin = main.indexOf('btnFinalizarLectura.addEventListener', inicio)
-  contexto.casosDeUso = casosDeUsoParaVista(contexto)
-  runInNewContext(main.slice(inicio, fin), contexto)
+  const campo = lecturaCampo(contexto)
   return {
-    elementos,
+    elementos: campo.elementos,
     lecturas,
     contexto,
-    procesar: (codigo) => procesar(codigo, () => {})
+    procesar: (codigo) => campo.enviar('form-lectura-ticket', codigo)
   }
 }
 

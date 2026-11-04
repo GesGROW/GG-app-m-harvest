@@ -1385,14 +1385,13 @@
       </section>
     </main>
 
-    <div id="context-overlay" class="bottom-sheet-overlay oculto" aria-hidden="true">
-      <section
-        id="context-sheet"
-        class="bottom-sheet"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="context-title"
-      >
+    <dialog
+      id="context-overlay"
+      class="bottom-sheet-overlay oculto"
+      aria-hidden="true"
+      aria-labelledby="context-title"
+    >
+      <section id="context-sheet" class="bottom-sheet">
         <div class="bottom-sheet__handle"></div>
         <div class="bottom-sheet__header">
           <h2 id="context-title">Opciones</h2>
@@ -1407,7 +1406,7 @@
         </div>
         <div id="context-options" class="bottom-sheet__options"></div>
       </section>
-    </div>
+    </dialog>
     <dialog
       id="confirmacion-lectura"
       class="confirmacion"

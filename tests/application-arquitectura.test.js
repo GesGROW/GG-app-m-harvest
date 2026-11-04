@@ -23,8 +23,23 @@ test('Application no manipula DOM ni conoce Supabase o códigos PostgREST', () =
   }
 })
 
-test('main delega los siete casos y no escribe comandos operativos ni genera UUID', () => {
-  const main = readFileSync(new URL('../src/main.js', import.meta.url), 'utf8')
+test('la presentación delega los siete casos y no escribe comandos operativos ni genera UUID', () => {
+  const ingreso = readFileSync(
+    new URL('../src/presentation/ingreso/index.js', import.meta.url),
+    'utf8'
+  )
+  const asignacion = readFileSync(
+    new URL('../src/presentation/operacion/asignacionTickets.js', import.meta.url),
+    'utf8'
+  )
+  const jaberos = readFileSync(
+    new URL('../src/presentation/operacion/registroJaberos.js', import.meta.url),
+    'utf8'
+  )
+  const lectura = readFileSync(
+    new URL('../src/presentation/lectura/index.js', import.meta.url),
+    'utf8'
+  )
   for (const nombre of [
     'validarOperador',
     'ingresarCampania',
@@ -34,10 +49,22 @@ test('main delega los siete casos y no escribe comandos operativos ni genera UUI
     'registrarLecturaJaba',
     'cerrarSesionLectura'
   ]) {
-    assert.ok(main.includes(`casosDeUso.${nombre}(`), nombre)
+    const fuente =
+      nombre === 'asignarTicket'
+        ? asignacion
+        : nombre === 'registrarJabero'
+          ? jaberos
+          : [
+                'iniciarSesionLectura',
+                'registrarLecturaJaba',
+                'cerrarSesionLectura'
+              ].includes(nombre)
+            ? lectura
+            : ingreso
+    assert.ok(fuente.includes(`casosDeUso.${nombre}(`), nombre)
   }
   assert.doesNotMatch(
-    main,
+    [ingreso, asignacion, jaberos, lectura].join('\n'),
     /guardarAsignacionOffline|registrarJaberoOffline|iniciarSesionOffline|registrarLecturaOffline|finalizarSesionOffline|existeTicketPendiente|obtenerSesionActivaJabero|crypto\.randomUUID/
   )
 })

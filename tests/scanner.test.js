@@ -1,16 +1,15 @@
-import { casosDeUsoParaVista } from './helpers/casosDeUso.js'
+import { lecturaCampo } from './helpers/lecturaCampo.js'
+import { formulariosCampo } from './helpers/formulariosCampo.js'
+import { ingresoCampo } from './helpers/ingresoCampo.js'
 import assert from 'node:assert/strict'
-import { seleccionarVariedadLote } from '@gesgrow/core/contexts/campaign-management/domain/variedadesLote.js'
 import { readFileSync } from 'node:fs'
 import test from 'node:test'
-import { runInNewContext } from 'node:vm'
 import {
   configurarEnvioScanner,
   esDniValido,
   normalizarValorScanner
 } from '../src/modules/scanner.js'
 
-const main = readFileSync(new URL('../src/main.js', import.meta.url), 'utf8')
 const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8')
 const siguienteTurno = () => new Promise((resolve) => setTimeout(resolve, 70))
 
@@ -339,41 +338,25 @@ test('permite escanear tras guardar localmente sin esperar la sincronización an
 function asignacionSimulada(
   buscar = async (dni) => ({ dni, nombre: 'Ana', campania: 'Actual' })
 ) {
-  const form = elemento()
-  const input = elemento()
-  const mensajes = []
   let busquedas = 0
-  let habilitaciones = 0
-  input.select = () => {}
-  const inicio = main.indexOf('configurarEnvioScanner(formCosechador,')
-  const fin = main.indexOf('// ASIGNAR TICKET', inicio)
-  assert.ok(inicio >= 0 && fin > inicio)
-  runInNewContext(main.slice(inicio, fin), {
-    configurarEnvioScanner,
-    esDniValido,
-    formCosechador: form,
-    dniCosechadorInput: input,
-    cosechador: null,
-    limpiarResultado: () => {},
-    mostrarResultado: (mensaje) => mensajes.push(mensaje),
-    buscarCosechador: (dni) => {
-      busquedas++
-      return buscar(dni)
+  const campo = formulariosCampo(
+    {
+      buscarCosechador: (dni) => {
+        busquedas++
+        return buscar(dni)
+      }
     },
-    nombreCosechadorVisible: (nombre) => nombre,
-    nombreCosechador: {},
-    campaniaCosechador: {},
-    infoCosechador: { classList: { remove() {} } },
-    desactivarTecladoManual: () => {},
-    habilitarTicket: () => habilitaciones++,
-    deshabilitarTicket: () => {}
-  })
+    { scanner: configurarEnvioScanner }
+  )
+  campo.abrirAsignacion()
   return {
-    form,
-    input,
-    mensajes,
+    form: campo.nodo('form-cosechador'),
+    input: campo.nodo('dni-cosechador'),
+    get mensajes() {
+      return campo.mensajesAsignacion.map((m) => m.mensaje)
+    },
     busquedas: () => busquedas,
-    habilitaciones: () => habilitaciones
+    habilitaciones: () => Number(!campo.nodo('codigo-ticket').disabled)
   }
 }
 
@@ -426,25 +409,53 @@ test('ASIGNAR TICKETS espera inputs de tareas posteriores y rechaza un noveno d�
 })
 
 function formularioSimulado(nombreForm, nombreInput, marcadorFin, contextoExtra) {
-  const form = elemento()
-  const input = elemento()
-  const inicio = main.indexOf(`configurarEnvioScanner(${nombreForm},`)
-  const fin = main.indexOf(marcadorFin, inicio)
-  assert.ok(inicio >= 0 && fin > inicio)
-  const contexto = {
-    configurarEnvioScanner,
-    esDniValido,
-    seleccionarVariedadLote,
-    [nombreForm]: form,
-    [nombreInput]: input,
-    navigator: { onLine: false },
-    desactivarTecladoManual() {},
-    actualizarEstadoConexion: async () => {},
-    ...contextoExtra
+  if (['formIniciarLectura', 'formLecturaTicket'].includes(nombreForm)) {
+    const contexto = { navigator: { onLine: false }, ...contextoExtra }
+    const campo = lecturaCampo(contexto, { scanner: configurarEnvioScanner })
+    campo.mostrarVista(campo.nodo('vista-lectura'))
+    campo.nodo('lote-lectura').value = contexto.loteLectura?.value ?? ''
+    campo.nodo('variedad-lectura').value = contexto.variedadLectura?.value ?? ''
+    contexto.variedadLectura = campo.nodo('variedad-lectura')
+    return {
+      form: campo.nodo(
+        nombreForm === 'formIniciarLectura'
+          ? 'form-iniciar-lectura'
+          : 'form-lectura-ticket'
+      ),
+      input: campo.nodo(
+        nombreForm === 'formIniciarLectura' ? 'dni-jabero-lectura' : 'ticket-lectura'
+      ),
+      contexto,
+      preparada: campo.preparada,
+      mensajes: campo.mensajes,
+      lectura: campo.lectura
+    }
   }
-  contexto.casosDeUso = casosDeUsoParaVista(contexto)
-  runInNewContext(main.slice(inicio, fin), contexto)
-  return { form, input, contexto }
+  if (['formJabero', 'formTicket'].includes(nombreForm)) {
+    const contexto = { navigator: { onLine: false }, ...contextoExtra }
+    const campo = formulariosCampo(contexto, { scanner: configurarEnvioScanner })
+    let preparada
+    if (nombreForm === 'formTicket') {
+      campo.abrirAsignacion()
+      preparada = campo.enviar('form-cosechador', contexto.cosechador.dni)
+    } else campo.abrirJaberos()
+    return {
+      form: campo.nodo(nombreForm === 'formTicket' ? 'form-ticket' : 'form-jabero'),
+      input: campo.nodo(nombreForm === 'formTicket' ? 'codigo-ticket' : 'dni-jabero'),
+      contexto,
+      preparada,
+      mensajes:
+        nombreForm === 'formTicket' ? campo.mensajesAsignacion : campo.mensajesJabero
+    }
+  }
+  const contexto = { navigator: { onLine: false }, ...contextoExtra }
+  const campo = ingresoCampo(contexto, { scanner: configurarEnvioScanner })
+  return {
+    form: campo.nodo('form-login'),
+    input: campo.nodo('dni-operador'),
+    contexto,
+    campo
+  }
 }
 
 async function escanearDniConUltimoDigitoTardio(input) {
@@ -457,49 +468,36 @@ async function escanearDniConUltimoDigitoTardio(input) {
 }
 
 test('LOGIN también espera el DNI completo cuando el último input llega tarde', async () => {
-  const errores = []
   const consultas = []
-  let continuaciones = 0
-  const vista = formularioSimulado('formLogin', 'dniOperadorInput', '// MENÚ', {
-    operador: null,
-    limpiarMensajeLogin() {},
-    mostrarErrorLogin: (mensaje) => errores.push(mensaje),
+  const vista = formularioSimulado('formLogin', 'dniOperadorInput', '', {
     validarOperador: async (dni) => {
       consultas.push(dni)
-      return { dni, offline: true }
-    },
-    sessionStorage: { setItem() {} },
-    mostrarMenu: () => continuaciones++
-    ,prepararIngreso: async () => continuaciones++
+      return { dni, offline: true, campanias: [{ id: 'A' }] }
+    }
   })
   await escanearDniConUltimoDigitoTardio(vista.input)
-  assert.deepEqual(errores, [])
+  assert.equal(vista.campo.nodo('login-mensaje').textContent, '')
   assert.deepEqual(consultas, ['01748037'])
-  assert.equal(continuaciones, 1)
+  assert.deepEqual(vista.campo.menus, ['A'])
+  assert.equal(vista.campo.storage.get('operador_dni'), '01748037')
 })
 
 test('REGISTRAR JABERO también espera el DNI completo y registra una vez', async () => {
-  const mensajes = []
   const registros = []
   const vista = formularioSimulado('formJabero', 'dniJaberoInput', '// NAVEGACIÓN', {
     operador: { dni: '17480378' },
-    limpiarResultadoJabero() {},
-    mostrarResultadoJabero: (mensaje, tipo) => mensajes.push({ mensaje, tipo }),
     obtenerTrabajador: async () => ({ nombre: 'Ana', roles: [] }),
-    nombreCosechadorVisible: (nombre, dni) => nombre || `DNI ${dni}`,
     registrarJaberoOffline: async (operador, dni) => registros.push({ operador, dni })
   })
   await escanearDniConUltimoDigitoTardio(vista.input)
   assert.deepEqual(registros, [{ operador: '17480378', dni: '01748037' }])
-  assert.equal(mensajes.length, 1)
-  assert.equal(mensajes[0].tipo, 'exito')
+  assert.equal(vista.mensajes.length, 1)
+  assert.equal(vista.mensajes[0].tipo, 'exito')
 })
 
 test('INICIAR LECTURA también espera el DNI del jabero y conserva el cero', async () => {
-  const errores = []
   const sesiones = []
   const lote = { lote_id: 'lote-1', codigo: 'L1', variedad: 'V1' }
-  let continuaciones = 0
   const vista = formularioSimulado(
     'formIniciarLectura',
     'dniJaberoLectura',
@@ -509,24 +507,21 @@ test('INICIAR LECTURA también espera el DNI del jabero y conserva el cero', asy
       sesionLectura: null,
       loteLectura: { value: lote.lote_id },
       variedadLectura: { value: '' },
-      mostrarMensajeLectura: (mensaje) => errores.push(mensaje),
       obtenerTrabajador: async () => ({ nombre: 'Ana', roles: ['JABERO'] }),
       obtenerSesionActivaJabero: async () => null,
       obtenerLotes: async () => [lote],
       crypto: { randomUUID: () => 'sesion-1' },
-      iniciarSesionOffline: async (sesion) => sesiones.push(sesion),
-      mostrarSesionLectura: async () => continuaciones++
+      iniciarSesionOffline: async (sesion) => sesiones.push(sesion)
     }
   )
   await escanearDniConUltimoDigitoTardio(vista.input)
-  assert.deepEqual(errores, [])
+  assert.deepEqual(vista.mensajes, [])
   assert.equal(sesiones.length, 1)
   assert.equal(sesiones[0].dni_jabero, '01748037')
-  assert.equal(continuaciones, 1)
+  assert.equal(vista.lectura.obtenerSesion().sesion_id, 'sesion-1')
 })
 
 test('INICIAR LECTURA sin DNI pide ingresar DNI antes de validar lote', async () => {
-  const errores = []
   const vista = formularioSimulado(
     'formIniciarLectura',
     'dniJaberoLectura',
@@ -539,36 +534,45 @@ test('INICIAR LECTURA sin DNI pide ingresar DNI antes de validar lote', async ()
   vista.input.value = '   '
   vista.form.emitir('submit', {})
   await siguienteTurno()
-  assert.deepEqual(errores, ['Ingresar DNI.'])
+  assert.deepEqual(vista.mensajes, ['Ingresar DNI.'])
 })
 
 test('INICIAR LECTURA guarda la variedad seleccionada en un lote con varias variedades', async () => {
-  const errores = []
   const sesiones = []
-  const lote = { lote_id: 'lote-multiple', codigo: 'L2', variedades: [
-    { id: 'v1', nombre: 'Ventura' }, { id: 'v2', nombre: 'Biloxi' }
-  ] }
-  const vista = formularioSimulado('formIniciarLectura', 'dniJaberoLectura',
-    'configurarEnvioScanner(formLecturaTicket,', {
-      operador: { dni: '17480378', campania: { id: 'campania-test' } }, sesionLectura: null,
-      loteLectura: { value: lote.lote_id }, variedadLectura: { value: 'v2' },
-      mostrarMensajeLectura: (mensaje) => errores.push(mensaje),
+  const lote = {
+    lote_id: 'lote-multiple',
+    codigo: 'L2',
+    variedades: [
+      { id: 'v1', nombre: 'Ventura' },
+      { id: 'v2', nombre: 'Biloxi' }
+    ]
+  }
+  const vista = formularioSimulado(
+    'formIniciarLectura',
+    'dniJaberoLectura',
+    'configurarEnvioScanner(formLecturaTicket,',
+    {
+      operador: { dni: '17480378', campania: { id: 'campania-test' } },
+      sesionLectura: null,
+      loteLectura: { value: lote.lote_id },
+      variedadLectura: { value: 'v2' },
       obtenerTrabajador: async () => ({ nombre: 'Ana', roles: ['JABERO'] }),
-      obtenerSesionActivaJabero: async () => null, obtenerLotes: async () => [lote],
+      obtenerSesionActivaJabero: async () => null,
+      obtenerLotes: async () => [lote],
       crypto: { randomUUID: () => 'sesion-multiple' },
-      iniciarSesionOffline: async (sesion) => sesiones.push(sesion),
-      mostrarSesionLectura: async () => {}
-    })
+      iniciarSesionOffline: async (sesion) => sesiones.push(sesion)
+    }
+  )
   vista.input.value = '01748037'
   vista.form.emitir('submit', {})
   await siguienteTurno()
-  assert.deepEqual(errores, [])
+  assert.deepEqual(vista.mensajes, [])
   assert.equal(sesiones[0].variedad_id, 'v2')
   assert.equal(sesiones[0].variedad, 'Biloxi')
   vista.contexto.variedadLectura.value = ''
   vista.form.emitir('submit', {})
   await siguienteTurno()
-  assert.deepEqual(errores, ['Seleccione una variedad del lote.'])
+  assert.deepEqual(vista.mensajes, ['Seleccione una variedad del lote.'])
   assert.equal(sesiones.length, 1)
 })
 
@@ -583,19 +587,15 @@ test('ASIGNAR TICKET permite otro ticket aunque la sincronización anterior siga
       operador: { dni: '17480378' },
       cosechador: { dni: '01748037', nombre: 'Ana' },
       navigator: { onLine: true },
-      limpiarResultado() {},
-      mostrarResultado() {},
       obtenerTicket: async () => null,
       existeTicketPendiente: async () => false,
       guardarAsignacionOffline: async (asignacion) => asignaciones.push(asignacion),
       obtenerColaCompleta: async () => [],
-      resultado: { textContent: '' },
-      setTimeout() {},
-      prepararSiguienteCosechador() {},
       sincronizarPendientes: () =>
         new Promise((resolve) => sincronizaciones.push(resolve))
     }
   )
+  await vista.preparada
   vista.input.value = 'TICKET-01'
   vista.input.emitir('keydown', { key: 'Enter' })
   vista.form.emitir('submit')
@@ -634,17 +634,10 @@ test('LECTURA DE TICKET también procesa CR por input una sola vez', async () =>
       crypto: { randomUUID: () => 'lectura-1' },
       registrarLecturaOffline: async (lectura) => lecturas.push(lectura),
       contarLecturasSesion: async () => 1,
-      contarLecturasCosechador: async () => 1,
-      nombreCosechadorVisible: (nombre) => nombre,
-      resultadoLectura: {},
-      estadoLecturaTicket: {},
-      mostrarEstadoLecturaTicket() {},
-      totalSesion: {},
-      etiquetaCosechador: {},
-      totalCosechador: {},
-      mostrarContadorCosechador() {}
+      contarLecturasCosechador: async () => 1
     }
   )
+  await vista.preparada
   vista.input.value = '00012345'
   vista.input.emitir('input', { data: '00012345\r', inputType: 'insertText' })
   vista.form.emitir('submit')
@@ -691,6 +684,18 @@ test('ASIGNAR TICKETS permite reintentar después de un error de búsqueda', asy
 })
 
 test('los seis inputs de scanner comparten la ruta Enter/submit', () => {
+  const lectura = readFileSync(
+    new URL('../src/presentation/lectura/index.js', import.meta.url),
+    'utf8'
+  )
+  const asignacion = readFileSync(
+    new URL('../src/presentation/operacion/asignacionTickets.js', import.meta.url),
+    'utf8'
+  )
+  const jaberos = readFileSync(
+    new URL('../src/presentation/operacion/registroJaberos.js', import.meta.url),
+    'utf8'
+  )
   for (const [form, input] of [
     ['formLogin', 'dniOperadorInput'],
     ['formCosechador', 'dniCosechadorInput'],
@@ -699,8 +704,22 @@ test('los seis inputs de scanner comparten la ruta Enter/submit', () => {
     ['formIniciarLectura', 'dniJaberoLectura'],
     ['formLecturaTicket', 'ticketLectura']
   ]) {
-    assert.ok(main.includes(`configurarEnvioScanner(${form}, ${input},`), input)
-    assert.ok(!main.includes(`${form}.addEventListener('submit'`), form)
+    const fuente = ['formCosechador', 'formTicket'].includes(form)
+      ? asignacion
+      : form === 'formJabero'
+        ? jaberos
+        : ['formIniciarLectura', 'formLecturaTicket'].includes(form)
+          ? lectura
+          : readFileSync(
+              new URL('../src/presentation/ingreso/index.js', import.meta.url),
+              'utf8'
+            )
+    assert.match(
+      fuente,
+      new RegExp(`configurarEnvioScanner\\(\\s*${form},\\s*${input},`),
+      input
+    )
+    assert.ok(!fuente.includes(`${form}.addEventListener('submit'`), form)
   }
 })
 

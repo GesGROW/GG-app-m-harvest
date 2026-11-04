@@ -85,7 +85,7 @@
 .table-scroll thead th {
   border-top: 0;
   background: var(--portal-table-head);
-  color: var(--color-white);
+  color: var(--color-table-header-fg);
   font-weight: 500;
   text-align: left;
   overflow-wrap: normal;

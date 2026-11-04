@@ -28,7 +28,12 @@ export function mostrarContadorCosechador(
 }
 
 // Reconciliar contadores no limpia un escaneo en curso ni oculta un rechazo.
-export async function actualizarTotalesLecturaEnVista(sesion, ui, consultas) {
+export async function actualizarTotalesLecturaEnVista(
+  sesion,
+  ui,
+  consultas,
+  { vigente = () => true } = {}
+) {
   const total = await consultas.contarLecturasSesion(sesion.sesion_id)
   const ultima = await consultas.obtenerUltimaLecturaSesion(sesion.sesion_id)
   const cantidad = ultima
@@ -38,6 +43,7 @@ export async function actualizarTotalesLecturaEnVista(sesion, ui, consultas) {
     ? ultima.cosechador ||
       (await consultas.obtenerTrabajador(ultima.cosechador_dni))?.nombre
     : null
+  if (!vigente()) return
   ui.totalSesion.textContent = total
   mostrarContadorCosechador(nombre, cantidad, ui)
 }
@@ -65,7 +71,8 @@ export async function mostrarSesionLecturaEnVista(
     obtenerTicket,
     obtenerTrabajador,
     obtenerLotes
-  }
+  },
+  { vigente = () => true, enfocar = () => true } = {}
 ) {
   const total = await contarLecturasSesion(sesion.sesion_id)
   const ultima = await obtenerUltimaLecturaSesion(sesion.sesion_id)
@@ -82,6 +89,7 @@ export async function mostrarSesionLecturaEnVista(
   const lotes = await obtenerLotes()
   const lote = lotes.find((item) => item.lote_id === sesion.lote_id)
 
+  if (!vigente()) return
   configuracionLectura.classList.add('oculto')
   sesionLecturaActiva.classList.remove('oculto')
   sesionJabero.textContent = sesion.jabero
@@ -97,5 +105,6 @@ export async function mostrarSesionLecturaEnVista(
   mensajeModuloLectura.className = 'resultado oculto'
   mostrarEstadoLecturaTicket('', { estadoLecturaTicket, resultadoLectura })
   ticketLectura.value = ''
-  ticketLectura.focus()
+  ticketLectura.disabled = false
+  if (enfocar()) ticketLectura.focus()
 }

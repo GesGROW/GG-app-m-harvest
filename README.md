@@ -32,6 +32,42 @@ npm run preview
 Las pruebas operativas y de arquitectura se ejecutan dentro de este repositorio.
 Las pruebas SQL y de Google Sheets se mantienen en GG-backend.
 
+## Organización
+
+`src/main.js` compone la interfaz y conserva los flujos operativos que aún no se
+han extraído. Los reportes están en `src/presentation/reportes/`: resumen,
+ranking, producción diaria y producción por lote. Cada vista recibe sus
+consultas y navegación; `src/application/crearConsultasReportes.js` coordina
+los puertos y la campaña activa usando la API pública de Harvest.
+Las consultas operativas y su menú contextual están en
+`src/presentation/consultas/`. `src/application/crearConsultasOperativas.js`
+compone asignaciones, jaberos, cosechadores y sesiones mediante lecturas locales
+inyectadas. Las vistas mantienen sus filtros y descartan resultados de cargas
+abandonadas antes de renderizar o navegar.
+Los formularios de asignación de tickets y registro de jaberos están en
+`src/presentation/operacion/`. Conservan su estado de interfaz y reciben los
+casos de uso, la autorización del escáner y las funciones técnicas por inyección.
+`main.js` compone los módulos y limpia sus estados al ingresar a una campaña
+o cerrar sesión.
+El flujo de lectura está en `src/presentation/lectura/`: configuración de
+lote/variedad, sesión activa, escaneo, confirmaciones de cierre y tarjetas de
+sesiones restaurables. El menú y las consultas reciben la sesión mediante
+`obtenerSesion()`; `main.js` ya no mantiene otra copia de ese estado.
+La pantalla y el indicador de sincronización están en
+`src/presentation/sincronizacion/`. Reciben las operaciones de cola y la política
+de descarte existentes por inyección. La lista se limita a la campaña activa y
+descarta cargas pendientes de una vista anterior.
+El ingreso está en `src/presentation/ingreso/`: conserva el operador, valida el
+DNI, presenta las campañas asignadas y coordina restauración, vencimiento y
+salida. Los demás flujos reciben `obtenerOperador()` y el escáner protegido por
+autorización. Las respuestas de un ingreso cancelado se descartan.
+`src/presentation/arranque/` concentra navegación general, teclados manuales y
+eventos de conexión, foco y visibilidad. Recibe sus colaboradores por inyección.
+`main.js` queda dedicado a componer los módulos y conectar los puertos técnicos;
+`bootstrap.js` configura los adaptadores y el acceso del dispositivo antes de
+cargarlo. El dominio mantiene una sola fuente en `@gesgrow/core`.
+Véase [límites y capas](docs/bounded-contexts.md).
+
 ## Diseño
 
 La PWA sigue la versión clara del Portal GesGROW: Google Sans Flex, verde profundo,

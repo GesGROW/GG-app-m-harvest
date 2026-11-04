@@ -1,72 +1,25 @@
-import { casosDeUsoParaVista } from './helpers/casosDeUso.js'
+import { ingresoCampo } from './helpers/ingresoCampo.js'
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
 import test from 'node:test'
-import vm from 'node:vm'
 import { resolverCampaniaOperador } from '@gesgrow/core/contexts/campaign-management/domain/campaniaOperador.js'
 import { parametrosCampania } from '../src/infrastructure/supabase/campania.js'
 
-const main = readFileSync(new URL('../src/main.js', import.meta.url), 'utf8')
-const node = () => ({
-  children: [],
-  listeners: {},
-  disabled: false,
-  replaceChildren() {
-    this.children = []
-  },
-  appendChild(child) {
-    this.children.push(child)
-  },
-  addEventListener(name, handler) {
-    this.listeners[name] = handler
-  }
-})
 const A = { id: 'A', cultivo_nombre: 'Arándanos', nombre: 'Arándanos 2026' }
 const B = { id: 'B', cultivo_nombre: 'Mandarina', nombre: 'Mandarina 2026' }
 function login(opciones, { offline = false, disponibles = ['A', 'B'] } = {}) {
-  const consultas = []
-  const menus = []
-  const storage = new Map()
-  const opcionesCultivo = node()
-  const ctx = vm.createContext({
+  const campo = ingresoCampo({
     operador: { dni: '47480378', campanias: opciones, offline },
-    resolverCampaniaOperador,
-    opcionesCultivo,
-    cultivoMensaje: { textContent: '' },
-    vistaCultivos: { id: 'cultivos' },
-    document: { createElement: node, querySelector: node },
-    cerrarSesion() {},
-    seleccionarCampaniaLocal: async (id) => consultas.push(['seleccion', id]),
-    obtenerCacheCampania: async (id) => (disponibles.includes(id) ? { id } : null),
-    actualizarCacheOperativa: async (dni, id) => consultas.push(['cache', dni, id]),
-    mostrarVista: (vista) => consultas.push(['vista', vista.id]),
-    mostrarMenu: () => menus.push(ctx.operador.campania.id),
-    sessionStorage: { setItem: (key, value) => storage.set(key, value) },
     navigator: { onLine: !offline },
-    sincronizarPendientes: async () => {},
-    actualizarEstadoConexion() {},
-    console,
-    esErrorTemporal: () => false,
-    sesionLectura: null,
-    cosechador: null,
-    resumenCampaniaActual: null,
-    produccionLotesActual: [],
-    produccionDiariaActual: [],
-    rankingCosechadoresActual: []
+    obtenerCacheCampania: async (id) => (disponibles.includes(id) ? { id } : null)
   })
-  ctx.casosDeUso = casosDeUsoParaVista(ctx)
-  vm.runInContext(
-    main.slice(
-      main.indexOf('async function prepararIngreso('),
-      main.indexOf('// LOGIN')
-    ),
-    ctx
-  )
-  return { ctx, consultas, menus, storage, opcionesCultivo }
+  return {
+    ...campo,
+    opcionesCultivo: campo.nodo('opciones-cultivo')
+  }
 }
 test('una sola campaña entra directamente y carga únicamente su caché', async () => {
   const vista = login([A])
-  await vista.ctx.prepararIngreso()
+  await vista.enviar()
   assert.deepEqual(vista.menus, ['A'])
   assert.deepEqual(vista.consultas, [
     ['seleccion', 'A'],
@@ -76,31 +29,34 @@ test('una sola campaña entra directamente y carga únicamente su caché', async
 })
 test('varias campañas solicitan cultivo y no cargan datos hasta elegirlo', async () => {
   const vista = login([A, B])
-  await vista.ctx.prepararIngreso()
+  await vista.enviar()
   assert.deepEqual(vista.menus, [])
-  assert.deepEqual(vista.consultas, [['vista', 'cultivos']])
+  assert.deepEqual(vista.consultas, [['vista', 'vista-cultivos']])
   assert.equal(vista.opcionesCultivo.children.length, 2)
   assert.match(vista.opcionesCultivo.children[1].textContent, /Mandarina/)
-  await vista.opcionesCultivo.children[1].listeners.click()
+  await vista.opcionesCultivo.children[1].emitir('click')
   assert.deepEqual(vista.menus, ['B'])
   assert.equal(vista.storage.get('campania_id'), 'B')
 })
 test('restaurar mantiene la campaña elegida y vuelve a preguntar si esa asignación desapareció', async () => {
   const restaurado = login([A, B])
-  await restaurado.ctx.prepararIngreso('B')
+  await restaurado.restaurar('B')
   assert.deepEqual(restaurado.menus, ['B'])
   const revocado = login([A, B])
-  await revocado.ctx.prepararIngreso('C')
+  await revocado.restaurar('C')
   assert.deepEqual(revocado.menus, [])
   assert.equal(revocado.opcionesCultivo.children.length, 2)
 })
 test('offline permite una campaña previamente cargada y explica si aún falta su caché', async () => {
   const vista = login([A, B], { offline: true, disponibles: ['A'] })
-  await vista.ctx.prepararIngreso()
-  await vista.opcionesCultivo.children[1].listeners.click()
+  await vista.enviar()
+  await vista.opcionesCultivo.children[1].emitir('click')
   assert.deepEqual(vista.menus, [])
-  assert.match(vista.ctx.cultivoMensaje.textContent, /no está disponible sin conexión/)
-  await vista.opcionesCultivo.children[0].listeners.click()
+  assert.match(
+    vista.nodo('cultivo-mensaje').textContent,
+    /no está disponible sin conexión/
+  )
+  await vista.opcionesCultivo.children[0].emitir('click')
   assert.deepEqual(vista.menus, ['A'])
   assert.equal(
     vista.consultas.some((item) => item[0] === 'cache'),
@@ -111,15 +67,15 @@ test('offline permite una campaña previamente cargada y explica si aún falta s
 test('cancelar durante la carga no restaura el ingreso desde una respuesta tardía', async () => {
   const vista = login([A, B])
   let completarCache
-  vista.ctx.actualizarCacheOperativa = () =>
+  vista.fuentes.actualizarCacheOperativa = () =>
     new Promise((resolve) => {
       completarCache = resolve
     })
-  await vista.ctx.prepararIngreso()
-  const ingreso = vista.opcionesCultivo.children[1].listeners.click()
+  await vista.enviar()
+  const ingreso = vista.opcionesCultivo.children[1].emitir('click')
   // Dejar que el ingreso alcance su consulta antes de volver a la pantalla DNI.
   await new Promise((resolve) => setImmediate(resolve))
-  vista.ctx.operador = null
+  await vista.nodo('btn-cancelar-cultivo').emitir('click')
   completarCache()
   await ingreso
   assert.deepEqual(vista.menus, [])

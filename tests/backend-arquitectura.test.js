@@ -35,6 +35,7 @@ test('UI, módulos y offline no importan infraestructura ni conocen nombres RPC'
   for (const [file, texto] of fuentes) {
     if (
       file !== path.join(src, 'main.js') &&
+      !file.startsWith(path.join(src, 'presentation') + path.sep) &&
       !file.startsWith(path.join(src, 'modules') + path.sep) &&
       !file.startsWith(path.join(src, 'offline') + path.sep)
     )

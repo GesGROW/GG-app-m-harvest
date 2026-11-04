@@ -22,7 +22,7 @@ REGISTRAR_JABA { dniOperador, campaniaId, sesionId,
 
 `lecturaId` pasa a ser el identificador propuesto de `RegistroCosecha` para esta confirmación. El comando tiene todos los datos necesarios y no requiere transformar la cola. El backend exige campaña y UUID de operación explícitos. No consulta un catálogo anterior para decidir, no deduce el cosechador del DTO local y no utiliza un RPC legacy como fallback.
 
-La composición `crearTicketsHarvest` también publica `registrarCosecha`. El dominio conserva independencia de SDK, infraestructura y APIs del navegador. `RegistroCosecha` puede conservar referencias inmutables a sesión y operación; la reconstrucción de estados prototipo de F5.1/F5.2 sigue admitiendo su ausencia.
+La composición histórica `crearTicketsHarvest` también publica `registrarCosecha` en la instantánea 0.1.1 de las pruebas SQL del backend. Esa composición sin consumidores se retiró de la fuente activa de la PWA; las factorías de Harvest y el adapter permanecen disponibles. El dominio conserva independencia de SDK, infraestructura y APIs del navegador. `RegistroCosecha` puede conservar referencias inmutables a sesión y operación; la reconstrucción de estados prototipo de F5.1/F5.2 sigue admitiendo su ausencia.
 
 ## Persistencia y consumo
 

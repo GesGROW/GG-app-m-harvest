@@ -39,7 +39,9 @@
   --portal-selected: #c1f13d;
   --portal-action: #93b730;
   --portal-action-hover: #83a429;
-  --portal-table-head: #1b9e10;
+  --color-table-header-bg: #14800f;
+  --color-table-header-fg: #ffffff;
+  --portal-table-head: var(--color-table-header-bg);
   --portal-table-hover: #e3ebd5;
   --portal-table-empty: #d9d9d9;
   --portal-table-divider: #fff;
