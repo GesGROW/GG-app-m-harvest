@@ -1,3 +1,5 @@
+import { nombreCosechadorVisible } from '@gesgrow/core/contexts/workforce/index.js'
+
 export function mostrarEstadoLecturaTicket(
   mensajeError,
   { estadoLecturaTicket, resultadoLectura }
@@ -21,10 +23,29 @@ export function mostrarContadorCosechador(
   cantidad,
   { etiquetaCosechador, totalCosechador }
 ) {
-  etiquetaCosechador.textContent = nombre || 'Cosechador actual'
+  etiquetaCosechador.textContent = String(nombre ?? '').trim() || 'Cosechador actual'
   totalCosechador.textContent = cantidad
     ? `${cantidad} ${cantidad === 1 ? 'jaba' : 'jabas'}`
     : '0'
+}
+
+async function resolverEtiquetaCosechador(lectura, consultas) {
+  if (!lectura) return null
+  const dni = String(lectura.cosechador_dni ?? '').trim()
+  const nombreReal = (valor) => {
+    const nombre = String(valor ?? '').trim()
+    return nombre && ![dni, `DNI ${dni}`, 'DNI no disponible'].includes(nombre)
+      ? nombre
+      : ''
+  }
+  // Preferir el catálogo actual al nombre guardado al registrar la jaba.
+  const trabajador = await consultas.obtenerTrabajador(dni)
+  let nombre = nombreReal(trabajador?.nombre)
+  if (!nombre && lectura.codigo_ticket) {
+    const ticket = await consultas.obtenerTicket?.(lectura.codigo_ticket)
+    nombre = nombreReal(ticket?.cosechador)
+  }
+  return nombreCosechadorVisible(nombre || nombreReal(lectura.cosechador), dni)
 }
 
 // Reconciliar contadores no limpia un escaneo en curso ni oculta un rechazo.
@@ -39,10 +60,7 @@ export async function actualizarTotalesLecturaEnVista(
   const cantidad = ultima
     ? await consultas.contarLecturasCosechador(sesion.sesion_id, ultima.cosechador_dni)
     : 0
-  const nombre = ultima
-    ? ultima.cosechador ||
-      (await consultas.obtenerTrabajador(ultima.cosechador_dni))?.nombre
-    : null
+  const nombre = await resolverEtiquetaCosechador(ultima, consultas)
   if (!vigente()) return
   ui.totalSesion.textContent = total
   mostrarContadorCosechador(nombre, cantidad, ui)
@@ -79,12 +97,10 @@ export async function mostrarSesionLecturaEnVista(
   const cantidad = ultima
     ? await contarLecturasCosechador(sesion.sesion_id, ultima.cosechador_dni)
     : 0
-  const nombre = ultima
-    ? ultima.cosechador ||
-      (ultima.codigo_ticket &&
-        (await obtenerTicket(ultima.codigo_ticket))?.cosechador) ||
-      (await obtenerTrabajador(ultima.cosechador_dni))?.nombre
-    : null
+  const nombre = await resolverEtiquetaCosechador(ultima, {
+    obtenerTicket,
+    obtenerTrabajador
+  })
 
   const lotes = await obtenerLotes()
   const lote = lotes.find((item) => item.lote_id === sesion.lote_id)

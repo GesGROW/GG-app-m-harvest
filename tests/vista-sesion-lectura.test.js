@@ -322,6 +322,76 @@ test('una sesión sin lecturas muestra el estado inicial neutral', async () => {
   assert.equal(elementos.totalCosechador.textContent, '0')
 })
 
+test('recalcular y restaurar muestran el DNI sin nombre y prefieren el nombre actualizado del catálogo', async () => {
+  for (const [nombreLectura, nombreTrabajador, nombreTicket, esperado] of [
+    [null, null, null, 'DNI 80000001'],
+    [undefined, undefined, undefined, 'DNI 80000001'],
+    ['', '', '', 'DNI 80000001'],
+    ['  \t ', '  ', '\n', 'DNI 80000001'],
+    ['80000001', null, null, 'DNI 80000001'],
+    ['DNI 80000001', ' Ana López ', 'Nombre anterior', 'Ana López'],
+    ['DNI 80000001', 'DNI 80000001', ' Ana López ', 'Ana López'],
+    [' Ana López ', null, null, 'Ana López'],
+    ['Nombre anterior', 'Ana López', null, 'Ana López']
+  ]) {
+    const ultima = {
+      codigo_ticket: 'TICKET',
+      cosechador_dni: '80000001',
+      cosechador: nombreLectura
+    }
+    const original = structuredClone(ultima)
+    const fuentes = {
+      contarLecturasSesion: async () => 19,
+      obtenerUltimaLecturaSesion: async () => ultima,
+      contarLecturasCosechador: async () => 3,
+      obtenerTrabajador: async () => ({ nombre: nombreTrabajador }),
+      obtenerTicket: async () => ({ cosechador: nombreTicket }),
+      obtenerLotes: async () => []
+    }
+    for (const actualizar of [
+      actualizarTotalesLecturaEnVista,
+      mostrarSesionLecturaEnVista
+    ]) {
+      const elementos = vista()
+      await actualizar(sesion('etiqueta-persona'), elementos, fuentes)
+      assert.equal(elementos.etiquetaCosechador.textContent, esperado)
+      assert.equal(elementos.totalCosechador.textContent, '3 jabas')
+      assert.equal(elementos.totalSesion.textContent, 19)
+      assert.deepEqual(ultima, original)
+    }
+  }
+})
+
+test('escanear sin nombre conserva el DNI después de actualizar conexión tanto online como offline', async () => {
+  for (const onLine of [true, false]) {
+    for (const nombre of [null, '   ']) {
+      const { elementos, lecturas, contexto, procesar } = escaneoSimulado({ onLine })
+      contexto.obtenerTicket = async () => ({
+        codigo_ticket: 'VALIDO',
+        cosechador_dni: '43829105',
+        cosechador: nombre,
+        estado_sync: 'SINCRONIZADO'
+      })
+      const etiquetas = []
+      contexto.actualizarEstadoConexion = async () => {
+        etiquetas.push(elementos.etiquetaCosechador.textContent)
+        await actualizarTotalesLecturaEnVista(sesion('sesion-ui'), elementos, {
+          contarLecturasSesion: contexto.contarLecturasSesion,
+          contarLecturasCosechador: contexto.contarLecturasCosechador,
+          obtenerUltimaLecturaSesion: async () => lecturas.at(-1),
+          obtenerTrabajador: contexto.obtenerTrabajador,
+          obtenerTicket: contexto.obtenerTicket
+        })
+        etiquetas.push(elementos.etiquetaCosechador.textContent)
+      }
+      await procesar('VALIDO')
+      assert.equal(lecturas.length, 1)
+      assert.deepEqual(etiquetas, ['DNI 43829105', 'DNI 43829105'])
+      assert.equal(elementos.totalCosechador.textContent, '1 jaba')
+    }
+  }
+})
+
 test('una lectura actualiza inmediatamente el nombre y las jabas del cosechador', async () => {
   const elementos = vista()
   const id = 'ui-sesion-escaneo'
