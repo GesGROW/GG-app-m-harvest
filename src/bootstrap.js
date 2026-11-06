@@ -1,6 +1,7 @@
 import { crearCasosDeUso } from './application/crearCasosDeUso.js'
 import { configurarCasosDeUso } from './application/casosDeUso.js'
 import { crearAdaptadoresOffline } from './infrastructure/offline/crearAdaptadoresOffline.js'
+import { crearAperturaSesionEnLinea } from './application/aperturaSesionEnLinea.js'
 import { backend, configurarBackend } from '@gesgrow/core/backend/backend.js'
 import { crearSupabaseBackend } from './infrastructure/supabase/backendAdapter.js'
 import { supabase, supabaseOperativo } from './infrastructure/supabase/client.js'
@@ -54,7 +55,7 @@ const campo = crearSupabaseBackend(
 configurarBackend(protegerBackendDispositivo(campo, dispositivo))
 const casos = crearCasosDeUso({
   backend,
-  offline: crearAdaptadoresOffline(),
+  offline: crearAperturaSesionEnLinea({ offline: crearAdaptadoresOffline(), backend, enLinea: () => navigator.onLine }),
   asignacionPorLoteObligatoria: true,
   estaEnLinea: () => navigator.onLine,
   generarId: () => crypto.randomUUID(),
