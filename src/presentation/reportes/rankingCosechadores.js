@@ -1,12 +1,11 @@
 import {
   buscarRankingCosechadores,
   esErrorConexionRanking,
-  formatearUltimaLectura,
   reemplazarRankingCosechadores,
   resumirRankingCosechadores
 } from '@gesgrow/core/contexts/harvest/index.js'
 import { nombreCosechadorVisible } from '@gesgrow/core/contexts/workforce/index.js'
-import { formatearNumero } from './formato.js'
+import { formatearNumero, formatearKg, totalPaquetes } from './formato.js'
 
 export function crearVistaRankingCosechadores({
   document,
@@ -82,7 +81,7 @@ export function crearVistaRankingCosechadores({
     const resumen = resumirRankingCosechadores(rankingCosechadoresActual)
     rankingResumen.textContent = `${formatearNumero(resumen.cosechadores)} ${
       resumen.cosechadores === 1 ? 'cosechador' : 'cosechadores'
-    } · ${formatearNumero(resumen.jabas)} ${resumen.jabas === 1 ? 'jaba' : 'jabas'}`
+    } | ${formatearNumero(totalPaquetes(rankingCosechadoresActual))} paquetes`
     rankingResumen.classList.remove('oculto')
 
     const filas = buscarRankingCosechadores(
@@ -101,21 +100,34 @@ export function crearVistaRankingCosechadores({
       const persona = document.createElement('td')
       persona.className = 'industrial-table__person'
       const nombre = document.createElement('strong')
-      nombre.textContent = nombreCosechadorVisible(fila.cosechador, fila.cosechador_dni)
+      const nombreReal = /^(sin nombre registrado|sin nombre)$/i.test(
+        fila.cosechador?.trim()
+      )
+        ? ''
+        : fila.cosechador
+      nombre.textContent = nombreCosechadorVisible(nombreReal, fila.cosechador_dni)
       const dni = document.createElement('span')
-      dni.textContent = fila.cosechador_dni || 'DNI no disponible'
-      persona.append(nombre, dni)
+      dni.textContent = `DNI ${fila.cosechador_dni || 'no disponible'}`
+      persona.append(nombre)
+      if (nombreReal?.trim()) persona.append(dni)
 
-      const produccion = document.createElement('td')
-      produccion.className =
-        'industrial-table__numeric industrial-table__count ranking-table__metric'
-      const total = document.createElement('strong')
-      total.textContent = formatearNumero(fila.total_jabas)
-      const ultima = document.createElement('span')
-      ultima.textContent = formatearUltimaLectura(fila.ultima_lectura)
-      produccion.append(total, ultima)
-
-      tr.append(posicion, persona, produccion)
+      const paquetes = fila.total_paquetes ?? fila.total_jabas
+      const metricas = [
+        formatearNumero(paquetes),
+        formatearNumero(fila.total_jabas),
+        formatearNumero(fila.total_jarras),
+        formatearKg(fila.kg_estimados, paquetes),
+        fila.dias_con_registros == null
+          ? 'N/A'
+          : formatearNumero(fila.dias_con_registros),
+        fila.promedio_diario == null ? 'N/A' : formatearNumero(fila.promedio_diario)
+      ].map((valor) => {
+        const td = document.createElement('td')
+        td.className = 'industrial-table__numeric'
+        td.textContent = valor
+        return td
+      })
+      tr.append(posicion, persona, ...metricas)
       rankingTablaBody.append(tr)
     }
 
@@ -127,7 +139,7 @@ export function crearVistaRankingCosechadores({
     const hayBusqueda = rankingBusqueda.value.trim().length > 0
     rankingEmpty.querySelector('strong').textContent = hayBusqueda
       ? 'No se encontraron cosechadores.'
-      : 'Aún no hay jabas registradas en este período.'
+      : 'Nadie ha cosechado aún en este período.'
     rankingEmpty.querySelector('p').textContent = hayBusqueda
       ? 'Pruebe con otro nombre o DNI.'
       : 'Las lecturas sincronizadas aparecerán aquí.'

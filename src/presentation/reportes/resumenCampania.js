@@ -5,6 +5,7 @@ import {
   formatearUltimaActividad,
   reemplazarResumenCampania
 } from '@gesgrow/core/contexts/harvest/index.js'
+import { formatearKg } from './formato.js'
 
 export function crearVistaResumenCampania({
   document,
@@ -20,6 +21,9 @@ export function crearVistaResumenCampania({
   const resumenCampaniaFeedback = document.querySelector('#resumen-campania-feedback')
   const resumenCampaniaContenido = document.querySelector('#resumen-campania-contenido')
   const resumenTotalJabas = document.querySelector('#resumen-total-jabas')
+  const resumenTotalPaquetes = document.querySelector('#resumen-total-paquetes')
+  const resumenTotalJarras = document.querySelector('#resumen-total-jarras')
+  const resumenKgEstimados = document.querySelector('#resumen-kg-estimados')
   const resumenTotalCosechadores = document.querySelector('#resumen-total-cosechadores')
   const resumenTotalLotes = document.querySelector('#resumen-total-lotes')
   const resumenTotalSesiones = document.querySelector('#resumen-total-sesiones')
@@ -91,6 +95,14 @@ export function crearVistaResumenCampania({
     resumenCampaniaFecha.classList.toggle('oculto', !fechaInicio)
 
     resumenTotalJabas.textContent = formatearNumeroResumen(resumen.total_jabas)
+    resumenTotalPaquetes.textContent = formatearNumeroResumen(
+      resumen.total_paquetes ?? resumen.total_jabas
+    )
+    resumenTotalJarras.textContent = formatearNumeroResumen(resumen.total_jarras)
+    resumenKgEstimados.textContent = formatearKg(
+      resumen.kg_estimados,
+      resumen.total_paquetes ?? resumen.total_jabas
+    )
     resumenTotalCosechadores.textContent = formatearNumeroResumen(
       resumen.total_cosechadores
     )
@@ -102,7 +114,10 @@ export function crearVistaResumenCampania({
     resumenUltimaActividad.textContent = formatearUltimaActividad(
       resumen.ultima_lectura
     )
-    resumenCampaniaEmpty.classList.toggle('oculto', resumen.total_jabas > 0)
+    resumenCampaniaEmpty.classList.toggle(
+      'oculto',
+      (resumen.total_paquetes ?? resumen.total_jabas) > 0
+    )
     resumenCampaniaContenido.classList.remove('oculto')
   }
 

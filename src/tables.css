@@ -136,16 +136,31 @@
 }
 
 .industrial-table.ranking-table {
-  --table-first-column: 12%;
-  --table-second-column: 52%;
-  --table-last-column: 36%;
+  --table-min-width: 1280px;
+  --table-first-column: 80px;
+  --table-second-column: 260px;
+  --table-last-column: 150px;
 }
 
 .industrial-table.produccion-table {
-  --table-min-width: 380px;
-  --table-first-column: 30%;
-  --table-second-column: 24%;
-  --table-last-column: 46%;
+  --table-min-width: 760px;
+  --table-first-column: 160px;
+  --table-second-column: 120px;
+  --table-last-column: 140px;
+}
+
+.industrial-table:is(.ranking-table, .produccion-table) :is(th, td) {
+  overflow-wrap: normal;
+  white-space: nowrap;
+}
+.industrial-table.ranking-table .industrial-table__person :is(strong, span) {
+  overflow-wrap: normal;
+  white-space: normal;
+}
+.ranking-table-wrap:focus-visible,
+.produccion-table-wrap:focus-visible {
+  outline: 2px solid var(--portal-ink);
+  outline-offset: 3px;
 }
 
 /* Reserva espacio para el DNI completo y la etiqueta de estado en el PDA. */

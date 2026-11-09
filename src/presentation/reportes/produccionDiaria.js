@@ -4,7 +4,7 @@ import {
   reemplazarProduccionDiaria,
   resumirProduccionDiaria
 } from '@gesgrow/core/contexts/harvest/index.js'
-import { formatearNumero } from './formato.js'
+import { formatearNumero, formatearKg, totalPaquetes } from './formato.js'
 
 export function crearVistaProduccionDiaria({
   document,
@@ -84,9 +84,7 @@ export function crearVistaProduccionDiaria({
 
   function renderProduccionDiaria() {
     const resumen = resumirProduccionDiaria(produccionDiariaActual)
-    produccionResumen.textContent = `${formatearNumero(resumen.jabas)} ${
-      resumen.jabas === 1 ? 'jaba' : 'jabas'
-    } · ${formatearNumero(resumen.dias)} ${
+    produccionResumen.textContent = `${formatearNumero(totalPaquetes(produccionDiariaActual))} paquetes | ${formatearNumero(resumen.dias)} ${
       resumen.dias === 1 ? 'día con producción' : 'días con producción'
     }`
     produccionResumen.classList.remove('oculto')
@@ -117,7 +115,17 @@ export function crearVistaProduccionDiaria({
       totalCosechadores.textContent = formatearNumero(fila.total_cosechadores)
       cosechadores.append(totalCosechadores)
 
-      tr.append(fecha, jabas, cosechadores)
+      const metricas = [
+        formatearNumero(fila.total_paquetes ?? fila.total_jabas),
+        formatearNumero(fila.total_jarras),
+        formatearKg(fila.kg_estimados, fila.total_paquetes ?? fila.total_jabas)
+      ].map((valor) => {
+        const td = document.createElement('td')
+        td.className = 'industrial-table__numeric'
+        td.textContent = valor
+        return td
+      })
+      tr.append(fecha, metricas[0], jabas, metricas[1], metricas[2], cosechadores)
       produccionTablaBody.append(tr)
     }
 

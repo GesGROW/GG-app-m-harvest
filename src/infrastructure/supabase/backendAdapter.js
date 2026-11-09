@@ -174,6 +174,12 @@ export function crearSupabaseBackend(supabase) {
       })
     },
     obtenerProduccionDiaria({ dniOperador, zonaHoraria, campaniaId }) {
+      if (campaniaId)
+        return consultar('harvest_reportes_pda', {
+          p_campania_id: campaniaId,
+          p_dni_operador: dniOperador,
+          p_tipo: 'DIARIA'
+        })
       return consultarCampania(
         campaniaId,
         'obtener_produccion_diaria',
@@ -185,17 +191,36 @@ export function crearSupabaseBackend(supabase) {
       )
     },
     obtenerProduccionLotes({ dniOperador, campaniaId }) {
+      if (campaniaId)
+        return consultar('harvest_reportes_pda', {
+          p_campania_id: campaniaId,
+          p_dni_operador: dniOperador,
+          p_tipo: 'LOTES'
+        })
       return consultarCampania(campaniaId, 'obtener_produccion_lotes', {
         p_dni_operador: dniOperador
       })
     },
     obtenerResumenCampania({ dniOperador, zonaHoraria, campaniaId }) {
+      if (campaniaId)
+        return consultar('harvest_reportes_pda', {
+          p_campania_id: campaniaId,
+          p_dni_operador: dniOperador,
+          p_tipo: 'RESUMEN'
+        })
       return consultarCampania(campaniaId, 'obtener_resumen_campania', {
         p_dni_operador: dniOperador,
         p_zona_horaria: zonaHoraria
       })
     },
     obtenerRankingCosechadores({ dniOperador, periodo = 'HOY', campaniaId }) {
+      if (campaniaId)
+        return consultar('harvest_reportes_pda', {
+          p_campania_id: campaniaId,
+          p_dni_operador: dniOperador,
+          p_tipo: 'RANKING',
+          p_periodo: periodo
+        })
       return consultarCampania(
         campaniaId,
         'obtener_ranking_cosechadores_periodo',

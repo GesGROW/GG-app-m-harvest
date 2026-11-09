@@ -147,8 +147,38 @@ for (const [operacion, nombre, ejecutar, parametros] of contratos) {
       assert.strictEqual(await ejecutar(adapter, campaniaId), datos)
       assert.deepEqual(llamadas, [
         [
-          campaniaId ? `${nombre}_campania` : nombre,
-          campaniaId ? { ...parametros, p_campania_id: campaniaId } : parametros
+          campaniaId &&
+          [
+            'obtenerResumenCampania',
+            'obtenerRankingCosechadores',
+            'obtenerProduccionDiaria',
+            'obtenerProduccionLotes'
+          ].includes(operacion)
+            ? 'harvest_reportes_pda'
+            : campaniaId
+              ? `${nombre}_campania`
+              : nombre,
+          campaniaId &&
+          [
+            'obtenerResumenCampania',
+            'obtenerRankingCosechadores',
+            'obtenerProduccionDiaria',
+            'obtenerProduccionLotes'
+          ].includes(operacion)
+            ? {
+                p_campania_id: campaniaId,
+                p_dni_operador: parametros.p_dni_operador,
+                p_tipo: {
+                  obtenerResumenCampania: 'RESUMEN',
+                  obtenerRankingCosechadores: 'RANKING',
+                  obtenerProduccionDiaria: 'DIARIA',
+                  obtenerProduccionLotes: 'LOTES'
+                }[operacion],
+                ...(parametros.p_periodo ? { p_periodo: parametros.p_periodo } : {})
+              }
+            : campaniaId
+              ? { ...parametros, p_campania_id: campaniaId }
+              : parametros
         ]
       ])
     })

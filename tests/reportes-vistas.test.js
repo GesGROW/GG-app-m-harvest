@@ -61,7 +61,7 @@ const metodos = {
   lotes: 'obtenerProduccionLotes'
 }
 
-function preparar() {
+function preparar(respuestasActuales = respuestas) {
   const document = documentoVista(html)
   const peticiones = []
   const navegacion = []
@@ -74,7 +74,7 @@ function preparar() {
         async (parametros) => {
           peticiones.push({ nombre, parametros })
           if (estado.error) throw estado.error
-          return respuestas[nombre]
+          return respuestasActuales[nombre]
         }
       ])
     )
@@ -90,6 +90,61 @@ function preparar() {
   const nodo = (id) => document.querySelector(`#${id}`)
   return { reportes, estado, peticiones, navegacion, nodo }
 }
+
+test('los reportes conservan cosecha solo en jarras, su peso y los días del ranking', async () => {
+  const cantidades = {
+    total_paquetes: 10,
+    total_jabas: 0,
+    total_jarras: 10,
+    kg_estimados: 13
+  }
+  const datos = structuredClone(respuestas)
+  Object.assign(datos.resumen.resumen, cantidades)
+  Object.assign(datos.ranking.ranking[0], cantidades, {
+    dias_con_registros: 2,
+    promedio_diario: 5
+  })
+  Object.assign(datos.diaria.produccion[0], cantidades)
+  Object.assign(datos.lotes.produccion[0], cantidades)
+  const v = preparar(datos)
+  await v.nodo('btn-reporte-resumen').emitir('click')
+  assert.equal(v.nodo('resumen-total-paquetes').textContent, '10')
+  assert.equal(v.nodo('resumen-total-jabas').textContent, '0')
+  assert.equal(v.nodo('resumen-total-jarras').textContent, '10')
+  assert.equal(v.nodo('resumen-kg-estimados').textContent, '13')
+  assert.equal(v.nodo('resumen-campania-empty').classList.contains('oculto'), true)
+  await v.nodo('btn-reporte-ranking').emitir('click')
+  assert.deepEqual(
+    v
+      .nodo('ranking-tabla-body')
+      .children[0].children.slice(2)
+      .map((c) => c.textContent),
+    ['10', '0', '10', '13', '2', '5']
+  )
+  await v.nodo('btn-reporte-produccion').emitir('click')
+  assert.equal(v.nodo('produccion-tabla-body').children.length, 1)
+  await v.nodo('btn-reporte-lotes').emitir('click')
+  assert.equal(v.nodo('lotes-lista').children.length, 1)
+})
+
+test('peso desconocido se presenta como N/A; campaña sin paquetes muestra 0', async () => {
+  const datos = structuredClone(respuestas)
+  Object.assign(datos.resumen.resumen, {
+    total_paquetes: 7,
+    total_jarras: 0,
+    kg_estimados: null
+  })
+  const v = preparar(datos)
+  await v.nodo('btn-reporte-resumen').emitir('click')
+  assert.equal(v.nodo('resumen-kg-estimados').textContent, 'N/A')
+  Object.assign(datos.resumen.resumen, {
+    total_paquetes: 0,
+    total_jabas: 0,
+    kg_estimados: 0
+  })
+  await v.nodo('btn-actualizar-resumen').emitir('click')
+  assert.equal(v.nodo('resumen-kg-estimados').textContent, '0')
+})
 
 for (const [nombre, boton, vista, datos, feedback] of [
   [

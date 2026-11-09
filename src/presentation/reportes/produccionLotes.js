@@ -7,7 +7,7 @@ import {
   reemplazarProduccionLotes,
   resumirProduccionLotes
 } from '@gesgrow/core/contexts/harvest/index.js'
-import { formatearNumero } from './formato.js'
+import { formatearNumero, formatearKg, totalPaquetes } from './formato.js'
 
 export function crearVistaProduccionLotes({
   document,
@@ -105,7 +105,7 @@ export function crearVistaProduccionLotes({
     const resumen = resumirProduccionLotes(produccionLotesActual)
     lotesResumen.textContent = `${formatearNumero(resumen.lotes)} ${
       resumen.lotes === 1 ? 'lote' : 'lotes'
-    } · ${formatearNumero(resumen.jabas)} ${resumen.jabas === 1 ? 'jaba' : 'jabas'}`
+    } | ${formatearNumero(totalPaquetes(produccionLotesActual))} paquetes`
     lotesResumen.classList.remove('oculto')
 
     const filtradas = buscarProduccionLotes(produccionLotesActual, lotesBusqueda.value)
@@ -137,9 +137,10 @@ export function crearVistaProduccionLotes({
       const produccion = document.createElement('div')
       produccion.className = 'lote-report-card__production'
       const total = document.createElement('strong')
-      total.textContent = formatearNumero(fila.total_jabas)
+      total.textContent = formatearNumero(fila.total_paquetes ?? fila.total_jabas)
       const unidad = document.createElement('span')
-      unidad.textContent = fila.total_jabas === 1 ? 'jaba' : 'jabas'
+      unidad.textContent =
+        (fila.total_paquetes ?? fila.total_jabas) === 1 ? 'paquete' : 'paquetes'
       produccion.append(total, unidad)
 
       cabecera.append(identidad, produccion)
@@ -148,6 +149,12 @@ export function crearVistaProduccionLotes({
       const metricas = document.createElement('div')
       metricas.className = 'lote-report-card__metrics'
       metricas.append(
+        crearMetricaLote('Jabas', formatearNumero(fila.total_jabas)),
+        crearMetricaLote('Jarras', formatearNumero(fila.total_jarras)),
+        crearMetricaLote(
+          'Kg estimados',
+          formatearKg(fila.kg_estimados, fila.total_paquetes ?? fila.total_jabas)
+        ),
         crearMetricaLote('Cosechadores', formatearNumero(fila.total_cosechadores)),
         crearMetricaLote('Sesiones', formatearNumero(fila.total_sesiones)),
         crearMetricaLote('Última', formatearUltimaLecturaLote(fila.ultima_lectura))
