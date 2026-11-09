@@ -31,7 +31,15 @@ writeFileSync(
         './tests/helpers/*': './tests/helpers/*',
         './index.html': './index.html'
       },
-      peerDependencies: { '@gesgrow/core': '0.1.0', idb: '8.0.3' }
+      peerDependencies: {
+        '@gesgrow/core': JSON.parse(
+          readFileSync(
+            fileURLToPath(import.meta.resolve('@gesgrow/core/package.json')),
+            'utf8'
+          )
+        ).version,
+        idb: '8.0.3'
+      }
     },
     null,
     2

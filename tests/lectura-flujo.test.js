@@ -50,6 +50,18 @@ function preparar(extra = {}) {
   return { ...campo, llamadas, eventos }
 }
 
+test('los botones cambian el recipiente de la siguiente lectura y mantienen una sola selección', async () => {
+  const v = preparar()
+  await v.nodo('recipiente-jarra').emitir('click')
+  assert.equal(v.nodo('tipo-recipiente-lectura').value, 'JARRA')
+  assert.equal(v.nodo('recipiente-jarra').getAttribute('aria-pressed'), 'true')
+  assert.equal(v.nodo('recipiente-jaba').getAttribute('aria-pressed'), 'false')
+  await v.nodo('recipiente-jaba').emitir('click')
+  assert.equal(v.nodo('tipo-recipiente-lectura').value, 'JABA')
+  assert.equal(v.nodo('recipiente-jarra').getAttribute('aria-pressed'), 'false')
+  assert.equal(v.nodo('recipiente-jaba').getAttribute('aria-pressed'), 'true')
+})
+
 test('abrir carga lotes por nombre y cambiar lote ofrece sus variedades', async () => {
   const v = preparar()
   await v.abrir()

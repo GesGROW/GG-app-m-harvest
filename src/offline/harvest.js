@@ -620,7 +620,10 @@ export function crearHarvestLocal({ dbPromise, crearOperacionEnTx }) {
         sesionId: args.sesionId,
         codigoTicket: args.codigoTicket,
         lecturaId: args.registroId,
-        fechaHora: args.fechaHora
+        fechaHora: args.fechaHora,
+        ...(args.tipoRecipiente
+          ? { tipoRecipiente: args.tipoRecipiente, pesoKg: args.pesoKg }
+          : {})
       })
       op.modelo = 'HARVEST'
       op.origenVersion = 5
@@ -672,6 +675,9 @@ export function crearHarvestLocal({ dbPromise, crearOperacionEnTx }) {
         cosechador: e.proyeccion.cosechador,
         trabajador_id: e.lote.asignacion.trabajadorId,
         fecha_hora: args.fechaHora,
+        ...(args.tipoRecipiente
+          ? { tipoRecipiente: args.tipoRecipiente, pesoKg: args.pesoKg }
+          : {}),
         estado_sync: 'PENDIENTE',
         valida: true,
         modelo: 'HARVEST',

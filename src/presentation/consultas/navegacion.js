@@ -91,7 +91,18 @@ export function crearNavegacionContextual({
       ['Inicio', formatearFechaSesion(sesion.fecha_inicio)],
       ['Fin', sesion.fecha_fin ? formatearFechaSesion(sesion.fecha_fin) : ''],
       ['Estado', obtenerBadgeEstadoSesion(sesion.estado)?.etiqueta || sesion.estado],
-      ['Total de jabas', String(sesion.total_jabas)],
+      ['Total de jabas', String(sesion.recipientes?.jabas ?? sesion.total_jabas)],
+      ...(sesion.recipientes
+        ? [
+            ['Total de jarras', String(sesion.recipientes.jarras)],
+            [
+              'Kg estimados',
+              sesion.recipientes.sinPeso === sesion.total_jabas
+                ? 'Sin peso registrado'
+                : `${sesion.recipientes.kg}${sesion.recipientes.sinPeso ? ' (parcial)' : ''}`
+            ]
+          ]
+        : []),
       ['Cosechadores distintos', String(sesion.cosechadores_distintos)]
     ]
 

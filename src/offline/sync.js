@@ -132,6 +132,9 @@ async function procesarOperacion(operacion) {
         codigoTicket: operacion.payload.codigoTicket,
         lecturaId: operacion.payload.lecturaId,
         fechaHora: operacion.payload.fechaHora,
+        ...(operacion.payload.tipoRecipiente
+          ? { tipoRecipiente: operacion.payload.tipoRecipiente }
+          : {}),
         operacionId: operacion.id,
         ...(operacion.modelo === 'LEGACY' ? { modeloSolicitado: 'LEGACY' } : {}),
         compatibilidadV4

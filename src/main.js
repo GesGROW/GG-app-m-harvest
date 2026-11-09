@@ -118,6 +118,7 @@ const lectura = crearLecturaTickets({
     obtenerTrabajador,
     contarLecturasSesion,
     contarLecturasCosechador,
+    obtenerLecturasSesion,
     obtenerUltimaLecturaSesion,
     obtenerSesionesActivas
   }

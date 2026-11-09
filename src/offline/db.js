@@ -840,6 +840,9 @@ export async function registrarLecturaOffline(lectura, dniOperador) {
     codigoTicket: lectura.codigo_ticket,
     lecturaId: lectura.id,
     fechaHora: lectura.fecha_hora,
+    ...(lectura.tipoRecipiente
+      ? { tipoRecipiente: lectura.tipoRecipiente, pesoKg: lectura.pesoKg }
+      : {}),
     campaniaId: sesion.campania_id
   })
   if (lectura.modelo === 'LEGACY') {

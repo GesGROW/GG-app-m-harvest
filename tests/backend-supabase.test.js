@@ -15,6 +15,26 @@ import {
 import { DatoDeTicketsInvalido } from '@gesgrow/core/contexts/harvest/index.js'
 
 const datos = { ok: true }
+test('envía el recipiente capturado al RPC sin enviar un peso arbitrario', async () => {
+  const { adapter, llamadas } = preparar(async (_nombre, args) => ({
+    data: respuestaRegistroHarvest(args),
+    error: null
+  }))
+  await adapter.registrarLecturaJaba({
+    dniOperador: '12345678',
+    campaniaId: 'C',
+    sesionId: 'S',
+    codigoTicket: 'T',
+    lecturaId: 'R',
+    fechaHora: '2026-11-06T12:00:00Z',
+    operacionId: 'O',
+    tipoRecipiente: 'JARRA',
+    pesoKg: 999
+  })
+  assert.equal(llamadas[0][0], 'harvest_registrar_recipiente')
+  assert.equal(llamadas[0][1].p_tipo_recipiente, 'JARRA')
+  assert.equal('p_peso_kg' in llamadas[0][1], false)
+})
 function preparar(responder = async () => ({ data: datos, error: null })) {
   const llamadas = []
   const adapter = crearSupabaseBackend({

@@ -1,3 +1,4 @@
+import { describirRecipientes } from '../../application/resumenRecipientes.js'
 import { nombreCosechadorVisible } from '@gesgrow/core/contexts/workforce/index.js'
 import {
   ORDEN_COSECHADORES_JABAS,
@@ -124,7 +125,8 @@ export function crearConsultaCosechadores({
 
       const jabasCell = document.createElement('td')
       jabasCell.className = 'industrial-table__numeric industrial-table__count'
-      jabasCell.textContent = cosechador.jabas
+      const r = cosechador.recipientes
+      jabasCell.textContent = r ? describirRecipientes(r) : cosechador.jabas
 
       const ultimaCell = document.createElement('td')
       ultimaCell.className = 'industrial-table__numeric industrial-table__time'

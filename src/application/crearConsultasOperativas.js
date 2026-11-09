@@ -3,6 +3,7 @@ import {
   enriquecerSesionLectura
 } from '@gesgrow/core/contexts/harvest/index.js'
 import { nombreCosechadorVisible } from '@gesgrow/core/contexts/workforce/index.js'
+import { resumirRecipientes } from './resumenRecipientes.js'
 
 export function crearConsultasOperativas({
   obtenerOperador,
@@ -34,7 +35,12 @@ export function crearConsultasOperativas({
           lecturas.obtenerLecturasSesion(sesionId),
           lecturas.obtenerTrabajadores()
         ])
-        return agruparLecturasPorCosechador(registros, trabajadores)
+        return agruparLecturasPorCosechador(registros, trabajadores).map((persona) => {
+          const filas = registros.filter((l) => l.cosechador_dni === persona.dni)
+          if (!filas.some((l) => l.tipoRecipiente)) return persona
+          const recipientes = resumirRecipientes(filas)
+          return { ...persona, jabas: recipientes.jabas, recipientes }
+        })
       }),
     sesiones: () =>
       enCampania(async (operador) => {
@@ -51,20 +57,25 @@ export function crearConsultasOperativas({
             const registros = sesionId
               ? await lecturas.obtenerLecturasSesion(sesionId)
               : []
-            return enriquecerSesionLectura(
-              {
-                ...sesion,
-                lote_nombre:
-                  nombresLotes.get(sesion.lote_id)?.trim() ||
-                  sesion.lote_nombre?.trim() ||
-                  'Lote sin nombre',
-                jabero: nombreCosechadorVisible(
-                  nombresPorDni.get(sesion.dni_jabero) || sesion.jabero,
-                  sesion.dni_jabero
-                )
-              },
-              registros
-            )
+            return {
+              ...enriquecerSesionLectura(
+                {
+                  ...sesion,
+                  lote_nombre:
+                    nombresLotes.get(sesion.lote_id)?.trim() ||
+                    sesion.lote_nombre?.trim() ||
+                    'Lote sin nombre',
+                  jabero: nombreCosechadorVisible(
+                    nombresPorDni.get(sesion.dni_jabero) || sesion.jabero,
+                    sesion.dni_jabero
+                  )
+                },
+                registros
+              ),
+              ...(registros.some((l) => l.tipoRecipiente)
+                ? { recipientes: resumirRecipientes(registros) }
+                : {})
+            }
           })
         )
       }),

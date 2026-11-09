@@ -3,6 +3,7 @@ import { mensajeErrorTickets } from '../../shared/mensajesTickets.js'
 import { nombreCosechadorVisible } from '@gesgrow/core/contexts/workforce/index.js'
 import { configurarConfirmacion } from '../../modules/confirmacion.js'
 import {
+  mostrarPesosLectura,
   mostrarContadorCosechador,
   mostrarEstadoLecturaTicket,
   mostrarSesionLecturaEnVista,
@@ -32,6 +33,8 @@ export function crearLecturaTickets({
       sesionLote: 'sesion-lote',
       sesionVariedad: 'sesion-variedad',
       totalSesion: 'total-sesion',
+      pesoSesion: 'peso-sesion',
+      pesoCosechador: 'peso-cosechador',
       etiquetaCosechador: 'etiqueta-cosechador',
       totalCosechador: 'total-cosechador',
       mensajeModuloLectura: 'mensaje-modulo-lectura',
@@ -41,6 +44,17 @@ export function crearLecturaTickets({
     }).map(([nombre, id]) => [nombre, nodo(id)])
   )
   const { ticketLectura, totalSesion, etiquetaCosechador, totalCosechador } = ui
+  const selectorRecipiente = nodo('tipo-recipiente-lectura')
+  function seleccionarRecipiente(tipo) {
+    if (selectorRecipiente) selectorRecipiente.value = tipo
+    nodo('recipiente-jarra')?.setAttribute('aria-pressed', String(tipo === 'JARRA'))
+    nodo('recipiente-jaba')?.setAttribute('aria-pressed', String(tipo === 'JABA'))
+  }
+  for (const tipo of ['JARRA', 'JABA'])
+    nodo(`recipiente-${tipo.toLowerCase()}`)?.addEventListener('click', () => {
+      seleccionarRecipiente(tipo)
+      if (activa()) ticketLectura.focus()
+    })
   const dniJaberoLectura = nodo('dni-jabero-lectura')
   const formIniciarLectura = nodo('form-iniciar-lectura')
   const formLecturaTicket = nodo('form-lectura-ticket')
@@ -135,7 +149,8 @@ export function crearLecturaTickets({
       resultado = await casosDeUso.registrarLecturaJaba({
         operador: obtenerOperador(),
         sesionLectura: sesion,
-        codigo
+        codigo,
+        tipoRecipiente: selectorRecipiente?.value || 'JABA'
       })
       if (vigente()) {
         const { ticket, total, totalPersona } = resultado
@@ -146,6 +161,7 @@ export function crearLecturaTickets({
           totalPersona,
           ui
         )
+        await mostrarPesosLectura(sesion.sesion_id, ui, consultas, vigente)
         ticketLectura.value = ''
         ticketLectura.disabled = false
         desactivarTecladoManual(ticketLectura)
@@ -204,14 +220,23 @@ export function crearLecturaTickets({
       if (vigente()) mostrarMensajeLectura(error.message, 'error')
     }
   }
+  selectorRecipiente?.addEventListener('change', () => {
+    if (activa()) ticketLectura.focus()
+  })
   async function mostrarSesion() {
     if (!sesionLectura) return
+    const sesion = sesionLectura
     const vigente = comprobarVigencia()
     desactivarTecladoManual(dniJaberoLectura, ticketLectura)
     await mostrarSesionLecturaEnVista(sesionLectura, ui, consultas, {
       vigente: () => vigente() && activa(),
       enfocar: activa
     })
+    if (vigente()) {
+      const ultima = await mostrarPesosLectura(sesion.sesion_id, ui, consultas, vigente)
+      if (vigente() && selectorRecipiente && ultima?.tipoRecipiente)
+        seleccionarRecipiente(ultima.tipoRecipiente)
+    }
   }
   function mostrarMensajeLectura(mensaje, tipo) {
     ui.mensajeModuloLectura.textContent = mensaje
@@ -222,6 +247,9 @@ export function crearLecturaTickets({
     if (dialogo.open) dialogo.close('cancelar')
     desactivarTecladoManual(dniJaberoLectura, ticketLectura)
     sesionLectura = null
+    seleccionarRecipiente('JABA')
+    if (ui.pesoSesion) ui.pesoSesion.textContent = ''
+    if (ui.pesoCosechador) ui.pesoCosechador.textContent = ''
     restaurables.limpiar()
     ui.configuracionLectura.classList.remove('oculto')
     ui.sesionLecturaActiva.classList.add('oculto')
@@ -244,13 +272,10 @@ export function crearLecturaTickets({
     },
     async actualizarTotales() {
       if (!sesionLectura) return
+      const sesion = sesionLectura
       const vigente = comprobarVigencia()
-      await actualizarTotalesLecturaEnVista(
-        sesionLectura,
-        { totalSesion, etiquetaCosechador, totalCosechador },
-        consultas,
-        { vigente }
-      )
+      await actualizarTotalesLecturaEnVista(sesionLectura, ui, consultas, { vigente })
+      if (vigente()) await mostrarPesosLectura(sesion.sesion_id, ui, consultas, vigente)
     }
   })
 }

@@ -103,16 +103,24 @@ export function crearRepositorioTicketsHarvestSupabase(supabase) {
         Object.assign(parametros, {
           p_sesion_id: args.sesionId,
           p_lectura_id: args.lecturaId,
-          p_fecha_hora: args.fechaHora
+          p_fecha_hora: args.fechaHora,
+          ...(args.tipoRecipiente
+            ? {
+                p_tipo_recipiente: args.tipoRecipiente,
+                p_legacy: modeloSolicitado === 'LEGACY'
+              }
+            : {})
         })
       const respuesta = await consultar(
-        modeloSolicitado === 'LEGACY'
-          ? tipo === 'ASIGNAR_TICKET'
-            ? 'asignar_ticket_campania'
-            : 'registrar_lectura_jaba_campania'
-          : tipo === 'ASIGNAR_TICKET'
-            ? 'harvest_asignar_v4'
-            : 'harvest_registrar_v4',
+        args.tipoRecipiente && tipo === 'REGISTRAR_JABA'
+          ? 'harvest_registrar_recipiente'
+          : modeloSolicitado === 'LEGACY'
+            ? tipo === 'ASIGNAR_TICKET'
+              ? 'asignar_ticket_campania'
+              : 'registrar_lectura_jaba_campania'
+            : tipo === 'ASIGNAR_TICKET'
+              ? 'harvest_asignar_v4'
+              : 'harvest_registrar_v4',
         parametros,
         true
       )
@@ -180,10 +188,11 @@ export function crearRepositorioTicketsHarvestSupabase(supabase) {
       sesionId,
       registroId,
       fechaHora,
-      operacionId
+      operacionId,
+      tipoRecipiente
     }) {
       const data = await consultar(
-        'harvest_registrar_cosecha',
+        tipoRecipiente ? 'harvest_registrar_recipiente' : 'harvest_registrar_cosecha',
         {
           p_campania_id: campaniaId,
           p_codigo_ticket: codigoTicket,
@@ -191,7 +200,8 @@ export function crearRepositorioTicketsHarvestSupabase(supabase) {
           p_sesion_id: sesionId,
           p_lectura_id: registroId,
           p_fecha_hora: fechaHora,
-          p_operacion_id: operacionId
+          p_operacion_id: operacionId,
+          ...(tipoRecipiente ? { p_tipo_recipiente: tipoRecipiente } : {})
         },
         true
       )

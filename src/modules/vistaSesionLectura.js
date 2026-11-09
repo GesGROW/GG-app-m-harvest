@@ -1,3 +1,7 @@
+import {
+  resumirRecipientes,
+  describirRecipientes
+} from '../application/resumenRecipientes.js'
 import { nombreCosechadorVisible } from '@gesgrow/core/contexts/workforce/index.js'
 
 export function mostrarEstadoLecturaTicket(
@@ -38,7 +42,7 @@ async function resolverEtiquetaCosechador(lectura, consultas) {
       ? nombre
       : ''
   }
-  // Preferir el catálogo actual al nombre guardado al registrar la jaba.
+  // Preferir el catÃ¡logo actual al nombre guardado al registrar la jaba.
   const trabajador = await consultas.obtenerTrabajador(dni)
   let nombre = nombreReal(trabajador?.nombre)
   if (!nombre && lectura.codigo_ticket) {
@@ -123,4 +127,28 @@ export async function mostrarSesionLecturaEnVista(
   ticketLectura.value = ''
   ticketLectura.disabled = false
   if (enfocar()) ticketLectura.focus()
+}
+
+export async function mostrarPesosLectura(
+  sesionId,
+  ui,
+  consultas,
+  vigente = () => true
+) {
+  if (!consultas.obtenerLecturasSesion) return
+  const lecturas = await consultas.obtenerLecturasSesion(sesionId)
+  const ultima = lecturas
+    .slice()
+    .sort((a, b) => (a.fecha_hora ?? '').localeCompare(b.fecha_hora ?? ''))
+    .at(-1)
+  const total = resumirRecipientes(lecturas)
+  const persona = resumirRecipientes(
+    lecturas.filter((l) => l.cosechador_dni === ultima?.cosechador_dni)
+  )
+  if (!vigente()) return
+  if (ui.pesoSesion) ui.pesoSesion.textContent = describirRecipientes(total)
+  if (ui.pesoCosechador) ui.pesoCosechador.textContent = describirRecipientes(persona)
+  if (ui.totalCosechador)
+    ui.totalCosechador.textContent = persona.jabas + persona.jarras
+  return ultima
 }

@@ -1,3 +1,4 @@
+import { describirRecipientes } from '../../application/resumenRecipientes.js'
 import {
   FILTROS_SESIONES_LECTURA,
   filtrarSesionesLectura,
@@ -119,7 +120,8 @@ export function crearConsultaSesiones({
 
       const jabasCell = document.createElement('td')
       jabasCell.className = 'industrial-table__numeric industrial-table__count'
-      jabasCell.textContent = sesion.total_jabas
+      const r = sesion.recipientes
+      jabasCell.textContent = r ? describirRecipientes(r) : sesion.total_jabas
 
       const estadoCell = document.createElement('td')
       const badge = obtenerBadgeEstadoSesion(sesion.estado)

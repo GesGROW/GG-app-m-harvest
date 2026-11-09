@@ -561,7 +561,7 @@
               <span class="home-action-tile__icon home-action-tile__icon--harvest"
                 ><svg aria-hidden="true"><use href="#icon-scan"></use></svg
               ></span>
-              <span class="home-action-tile__title">Lectura de jabas</span>
+              <span class="home-action-tile__title">Lectura de cosecha</span>
             </button>
             <button id="btn-menu-reportes" class="home-action-tile">
               <svg
@@ -1150,7 +1150,7 @@
           >
             <svg aria-hidden="true"><use href="#icon-arrow-left"></use></svg>
           </button>
-          <div class="app-header__title">Lectura de jabas</div>
+          <div class="app-header__title">Lectura de cosecha</div>
           <button
             class="icon-button btn-secondary btn-contexto"
             data-contexto="lectura"
@@ -1245,6 +1245,14 @@
                 <span>Variedad <strong id="sesion-variedad">-</strong></span>
               </div>
             </div>
+            <div class="recipiente-control">
+              <span id="recipiente-titulo">Recipiente</span>
+              <input id="tipo-recipiente-lectura" type="hidden" value="JABA" />
+              <div class="recipiente-opciones" role="group" aria-labelledby="recipiente-titulo">
+                <button id="recipiente-jarra" type="button" aria-pressed="false">Jarra</button>
+                <button id="recipiente-jaba" type="button" aria-pressed="true">Jaba</button>
+              </div>
+            </div>
             <div class="card step-card step-card--active scan-dominante">
               <div class="cabecera-card cabecera-card--compacta">
                 <div
@@ -1257,7 +1265,7 @@
                 </div>
                 <div>
                   <h2>Escanear ticket</h2>
-                  <p>Cada lectura registra una jaba</p>
+                  <p>Registra el recipiente seleccionado</p>
                 </div>
               </div>
               <form id="form-lectura-ticket">
@@ -1293,12 +1301,14 @@
             <div class="estadisticas-lectura">
               <div class="metric-card metric-card--primary">
                 <span class="stat-label">Total sesión</span
-                ><strong id="total-sesion" class="stat-numero">0</strong>
+                ><strong id="total-sesion" class="stat-numero">0</strong
+                ><small id="peso-sesion" aria-live="polite"></small>
               </div>
               <div class="metric-card">
                 <span id="etiqueta-cosechador" class="stat-label"
                   >Cosechador actual</span
-                ><strong id="total-cosechador" class="stat-numero">0</strong>
+                ><strong id="total-cosechador" class="stat-numero">0</strong
+                ><small id="peso-cosechador" aria-live="polite"></small>
               </div>
             </div>
             <button id="btn-finalizar-lectura" class="btn-secondary btn-finalizar">

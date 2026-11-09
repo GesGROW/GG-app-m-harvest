@@ -93,6 +93,35 @@ const consumir = (codigoTicket = 'T1', campaniaId = 'C') =>
     registroId: crypto.randomUUID(),
     fechaHora: FECHA
   })
+
+test('lecturas mixtas conservan recipiente y peso en la cola y al restaurar', async () => {
+  await preparar('C', true)
+  for (const [codigoTicket, tipoRecipiente, pesoKg] of [
+    ['T1', 'JARRA', 1.3],
+    ['T2', 'JABA', 2.4]
+  ]) {
+    const { operacion } = await local.reservarConsumoHarvest({
+      codigoTicket,
+      tipoRecipiente,
+      pesoKg,
+      dniOperador: OP,
+      campaniaId: 'C',
+      sesionId: 'S-C',
+      registroId: crypto.randomUUID(),
+      fechaHora: FECHA
+    })
+    assert.equal(operacion.payload.tipoRecipiente, tipoRecipiente)
+    assert.equal(operacion.payload.pesoKg, pesoKg)
+  }
+  await local.seleccionarCampaniaLocal('D')
+  await local.seleccionarCampaniaLocal('C')
+  const lecturas = await local.obtenerLecturasSesion('S-C')
+  assert.equal(lecturas.length, 2)
+  assert.deepEqual(lecturas.map((l) => [l.tipoRecipiente, l.pesoKg]).sort(), [
+    ['JABA', 2.4],
+    ['JARRA', 1.3]
+  ])
+})
 async function dbSnapshot() {
   const db = await openDB('scc', 5)
   const resultado = {}

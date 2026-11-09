@@ -75,7 +75,8 @@ export function crearSupabaseBackend(supabase) {
       codigoTicket,
       operacionId,
       compatibilidadV4 = false,
-      modeloSolicitado
+      modeloSolicitado,
+      tipoRecipiente
     }) {
       if (compatibilidadV4 || modeloSolicitado === 'LEGACY')
         return repositorioTickets.procesarV4(
@@ -134,7 +135,8 @@ export function crearSupabaseBackend(supabase) {
       fechaHora = new Date().toISOString(),
       operacionId,
       compatibilidadV4 = false,
-      modeloSolicitado
+      modeloSolicitado,
+      tipoRecipiente
     }) {
       if (compatibilidadV4 || modeloSolicitado === 'LEGACY')
         return repositorioTickets.procesarV4(
@@ -146,6 +148,7 @@ export function crearSupabaseBackend(supabase) {
             codigoTicket,
             lecturaId,
             fechaHora,
+            ...(tipoRecipiente ? { tipoRecipiente } : {}),
             operacionId
           },
           modeloSolicitado
@@ -158,6 +161,7 @@ export function crearSupabaseBackend(supabase) {
         sesionId,
         codigoTicket,
         registroId: lecturaId,
+        ...(tipoRecipiente ? { tipoRecipiente } : {}),
         fechaHora,
         operacionId
       })
