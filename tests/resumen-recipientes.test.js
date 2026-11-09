@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { resumirRecipientes } from '../src/application/resumenRecipientes.js'
+import { resumirRecipientes, describirRecipientes } from '../src/application/resumenRecipientes.js'
+
+test('separa los conteos y kilos con barras verticales', () => {
+  assert.equal(describirRecipientes({jabas:5,jarras:10,kg:25,sinPeso:0}), '5 jabas | 10 jarras | 25 kg estimados')
+})
 
 test('suma pesos sin errores decimales y conserva las lecturas históricas sin peso', () => {
   const lecturas = [

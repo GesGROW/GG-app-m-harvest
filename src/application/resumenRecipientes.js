@@ -17,5 +17,5 @@ export function describirRecipientes(r) {
     r.sinPeso === r.jabas + r.jarras && r.sinPeso > 0
       ? 'Sin peso registrado'
       : `${r.kg.toLocaleString('es-PE', { maximumFractionDigits: 1 })} kg estimados${r.sinPeso ? ' (parcial)' : ''}`
-  return `${r.jabas} jabas · ${r.jarras} jarras · ${peso}`
+  return `${r.jabas} jabas | ${r.jarras} jarras | ${peso}`
 }
